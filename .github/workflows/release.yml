@@ -1,0 +1,153 @@
+name: Create a release assets
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  release_runetale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18.5
+
+      - name: github private modules access
+        run: |
+          git config --global url."https://${{ secrets.GO_MODULES_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          export GOPRIVATE="github.com/runetale/client-go"
+
+      - name: cache go mod
+        uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: install go mod
+        run: go mod tidy
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --config .goreleaser_runetale.yml --rm-dist
+        env:
+          BREW_TAP_REPO_TOKEN: ${{ secrets.BREW_TAP_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload
+        id: upload-runetale
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-runetale
+          path: dist/
+          retention-days: 3
+
+  release_runetaled:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18.5
+
+      - name: github private modules access
+        run: |
+          git config --global url."https://${{ secrets.GO_MODULES_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          export GOPRIVATE="github.com/runetale/client-go"
+
+      - name: cache go mod
+        uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: install go mod
+        run: go mod tidy
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --config .goreleaser_runetaled.yml --rm-dist
+        env:
+          BREW_TAP_REPO_TOKEN: ${{ secrets.BREW_TAP_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload
+        id: upload-runetaled
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-runetaled
+          path: dist/
+          retention-days: 3
+
+  upload_debian_packages:
+    runs-on: ubuntu-latest
+    needs: [release_runetale, release_runetaled]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v3
+        id: download-runetale
+        with:
+          name: release-runetale
+
+      - uses: actions/download-artifact@v3
+        id: download-runetaled
+        with:
+          name: release-runetaled
+
+      - name: setup ssh
+        run: |
+          mkdir -p /home/runner/.ssh
+          touch /home/runner/.ssh/key && echo "$PKGS_SSH_KEY" > /home/runner/.ssh/key
+          chmod 600 /home/runner/.ssh/key
+        env:
+          PKGS_SSH_KEY: ${{ secrets.PKGS_SSH_KEY }}
+
+      - name: rsync deploy
+        run: |
+          rsync -e "ssh -i /home/runner/.ssh/key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" \
+            -av ${{ steps.download-runetale.outputs.download-path }}/*.deb \
+            $PKGS_SSH_USERNAME@$PKGS_SSH_ADDRESS:$PKGS_DEBIAN_DIR
+        env:
+          PKGS_DEBIAN_DIR: ${{ secrets.PKGS_DEBIAN_DIR }}
+          PKGS_SSH_ADDRESS: ${{ secrets.PKGS_SSH_ADDRESS }}
+          PKGS_SSH_USERNAME: ${{ secrets.PKGS_SSH_USERNAME }}
+
+  release_apt_repository:
+    runs-on: ubuntu-latest
+    needs: [upload_debian_packages]
+    steps:
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.PKGS_SSH_ADDRESS }}
+          username: ${{ secrets.PKGS_SSH_USERNAME }}
+          key: ${{ secrets.PKGS_SSH_KEY }}
+          script: |
+            cd /packages/debian
+            find pool -type f  | grep pool/runetale.*_linux_amd64.deb | xargs -I src cp src pool/main/amd64
+            dpkg-scanpackages --arch amd64 pool/main/ > dists/stable/main/binary-amd64/Packages
+            cat dists/stable/main/binary-amd64/Packages | gzip -9 > dists/stable/main/binary-amd64/Packages.gz
+            cd dists/stable
+            /packages/debian/generate-release.sh > Release
+            cat Release | gpg --default-key example -abs > Release.gpg
+            cat Release | gpg --default-key example -abs --clearsign > InRelease

@@ -1,0 +1,72 @@
+project_name: runetale
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: runetale
+    dir: cmd/runetale
+    binary: runetale
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X github.com/runetale/runetale/cmd/runetale/cmd.version={{.Version}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    goos:
+      - linux
+      - darwin
+      # - windows
+    goarch:
+      - arm
+      - amd64
+      - arm64
+      - mips
+      - 386
+    gomips:
+      - hardfloat
+      - softfloat
+
+# *.tar.gz
+archives:
+  - builds:
+      - runetale
+    files:
+      - README.md
+
+# *.deb, *.rpm, *.apk
+nfpms:
+  - id: runetale-deb
+    maintainer: dev@runetale.com
+    description: runetale
+    homepage: https://runetale.com
+    bindir: /usr/bin
+    builds:
+      - runetale
+    formats:
+      - deb
+    scripts:
+      # install or uninstall after
+      preinstall: "scripts/preinstall.sh"
+      preremove: "scripts/preremove.sh"
+      # install or uninstall later
+      # postinstall: "scripts/preremove.sh"
+      # postremove: "scripts/preremove.sh"
+
+brews:
+  - ids:
+      - default
+    commit_author:
+      name: runetale
+      email: dev@runetale.com
+    description: P2P mesh network using WireGuard
+    tap:
+      owner: runetale
+      name: homebrew-tap
+      token: "{{ .Env.BREW_TAP_REPO_TOKEN }}"
+      branch: main
+    download_strategy: CurlDownloadStrategy
+    homepage: https://runetale.com/
+    license: "BSD3"
+    test: |
+      system "#{bin}/{{ .ProjectName }} version"

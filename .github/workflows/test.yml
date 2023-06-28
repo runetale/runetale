@@ -1,0 +1,35 @@
+name: UnitTest
+
+on:
+  push:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17
+
+      - uses: actions/checkout@v3
+
+      - name: Restore cache
+        uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod/cache
+          key: ${{ runner.os }}-go-mod-cache-new-${{ hashFiles('**/go.sum') }}
+
+      - name: Setup GitHub token
+        run: |
+          git config --global url."https://runetale:${{ secrets.GH_PAT_ORG }}@github.com".insteadOf "https://github.com"
+
+      - name: Get dependencies
+        run: |
+          go mod download -x
+
+      - name: Go Test
+        run: |
+          go build -v ./...
