@@ -53,3 +53,5 @@ go.work
 
 # bin
 /bin
+
+.DS_Store
