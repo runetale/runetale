@@ -11,7 +11,6 @@ import (
 	"github.com/runetale/client-go/runetale/runetale/v1/daemon"
 	"github.com/runetale/client-go/runetale/runetale/v1/login_session"
 	"github.com/runetale/client-go/runetale/runetale/v1/machine"
-	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/system"
 	"github.com/runetale/runetale/utils"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
