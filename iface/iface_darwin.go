@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
 	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/conn"

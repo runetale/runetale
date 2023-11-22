@@ -4,10 +4,6 @@
 
 package daemon
 
-import (
-	"github.com/runetale/runetale/runelog"
-)
-
 const (
 	running      = "\t[\033[32mRUNNING\033[0m]"
 	failed       = "\t[\033[31mFAILED\033[0m]"
