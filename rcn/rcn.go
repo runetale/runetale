@@ -28,14 +28,14 @@ type Rcn struct {
 	iface        *iface.Iface
 	mk           string
 	mu           *sync.Mutex
-	runelog      *runelog.runelog
+	runelog      *runelog.Runelog
 }
 
 func NewRcn(
 	conf *conf.Conf,
 	mk string,
 	ch chan struct{},
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) *Rcn {
 	cp := controlplane.NewControlPlane(
 		conf.SignalClient,
@@ -90,7 +90,7 @@ func (r *Rcn) createIface() error {
 		return err
 	}
 
-	res, err := r.serverClient.Login(r.mk, wgPrivateKey.PublicKey().String())
+	res, err := r.serverClient.Join(r.mk, wgPrivateKey.PublicKey().String())
 	if err != nil {
 		return err
 	}

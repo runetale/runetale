@@ -19,14 +19,14 @@ type SigExecuter struct {
 	dstmk        string
 	srcmk        string
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func NewSigExecuter(
 	signalClient grpc.SignalClientImpl,
 	dstmk string,
 	srcmk string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) *SigExecuter {
 	return &SigExecuter{
 		signalClient: signalClient,

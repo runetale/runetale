@@ -35,7 +35,7 @@ type WireProxy struct {
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 // TODO: (shinta) rewrite to proxy using sock5?
@@ -46,7 +46,7 @@ func NewWireProxy(
 	wgiface string,
 	listenAddr string,
 	presharedkey string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 	agent *ice.Agent,
 ) *WireProxy {
 	ctx, cancel := context.WithCancel(context.Background())

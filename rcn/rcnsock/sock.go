@@ -22,14 +22,14 @@ type RcnSock struct {
 	ip   string
 	cidr string
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 
 	ch chan struct{}
 }
 
 // if scp is nil when making this function call, just listen
 func NewRcnSock(
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 	ch chan struct{},
 ) *RcnSock {
 	return &RcnSock{
