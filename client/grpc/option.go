@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func NewGrpcDialOption(runelog *runelog.runelog, isdebug bool) grpc.DialOption {
+func NewGrpcDialOption(runelog *runelog.Runelog, isdebug bool) grpc.DialOption {
 	var option grpc.DialOption
 	if isdebug {
 		option = grpc.WithTransportCredentials(insecure.NewCredentials())
