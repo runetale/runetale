@@ -69,7 +69,7 @@ func execLogin(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	_, err = c.ServerClient.Login(c.MachinePubKey, c.Spec.WgPrivateKey)
+	_, err = c.ServerClient.Join(c.MachinePubKey, c.Spec.WgPrivateKey)
 	if err != nil {
 		runelog.Logger.Warnf("failed to login, %s", err.Error())
 		return nil
