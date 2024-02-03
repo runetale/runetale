@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
 	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/conn"
@@ -20,7 +21,7 @@ import (
 
 func CreateIface(
 	i *Iface,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	addr := i.IP + "/" + i.CIDR
 
@@ -51,7 +52,7 @@ func CreateIface(
 
 func RemoveIface(
 	tunname string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	ipCmd, err := exec.LookPath("ifconfig")
 	if err != nil {
