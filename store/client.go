@@ -21,13 +21,13 @@ type ClientManager interface {
 type ClientStore struct {
 	storeManager FileStoreManager
 	privateKey   key.RunetaleClientPrivateState
-	runelog      *runelog.runelog
+	runelog      *runelog.Runelog
 
 	mu sync.Mutex
 }
 
 // client Store initialization method.
-func NewClientStore(f FileStoreManager, runelog *runelog.runelog) *ClientStore {
+func NewClientStore(f FileStoreManager, runelog *runelog.Runelog) *ClientStore {
 	return &ClientStore{
 		storeManager: f,
 		runelog:      runelog,

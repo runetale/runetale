@@ -29,7 +29,7 @@ type Conn struct {
 
 	mu *sync.Mutex
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func NewConn(
@@ -42,7 +42,7 @@ func NewConn(
 	remoteWgPubKey string,
 	wgPubKey string,
 
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) *Conn {
 	ctx, cancel := context.WithCancel(context.Background())
 

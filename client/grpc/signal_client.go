@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/pion/ice/v2"
-	"github.com/runetale/client-go/Runetale/runetale/v1/negotiation"
-	"github.com/runetale/client-go/Runetale/runetale/v1/rtc"
+	"github.com/runetale/client-go/runetale/runetale/v1/negotiation"
+	"github.com/runetale/client-go/runetale/runetale/v1/rtc"
 	"github.com/runetale/runetale/rcn/conn"
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
@@ -50,13 +50,13 @@ type SignalClient struct {
 
 	connState *conn.ConnectState
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func NewSignalClient(
 	conn *grpc.ClientConn,
 	cs *conn.ConnectState,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) SignalClientImpl {
 	return &SignalClient{
 		negClient: negotiation.NewNegotiationServiceClient(conn),

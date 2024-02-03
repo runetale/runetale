@@ -28,12 +28,12 @@ type Iface struct {
 	// your cidr range
 	CIDR string
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func NewIface(
 	tun, wgPrivateKey, ip string,
-	cidr string, runelog *runelog.runelog,
+	cidr string, runelog *runelog.Runelog,
 ) *Iface {
 	return &Iface{
 		Tun:          tun,

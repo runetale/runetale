@@ -16,7 +16,7 @@ type Conf struct {
 	ServerClient  grpc_client.ServerClientImpl
 	Spec          *Spec
 	MachinePubKey string
-	runelog       *runelog.runelog
+	runelog       *runelog.Runelog
 }
 
 func NewConf(
@@ -25,7 +25,7 @@ func NewConf(
 	isDev bool,
 	serverHost string, serverPort uint,
 	signalHost string, signalPort uint,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) (*Conf, error) {
 	// configure file store
 	//
@@ -90,7 +90,7 @@ func NewConf(
 func setupGrpcServerClient(
 	clientctx context.Context,
 	url string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 	option grpc.DialOption,
 ) (grpc_client.ServerClientImpl, error) {
 	sconn, err := grpc.DialContext(
@@ -112,7 +112,7 @@ func setupGrpcServerClient(
 func setupGrpcSignalClient(
 	clientctx context.Context,
 	url string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 	option grpc.DialOption,
 ) (grpc_client.SignalClientImpl, error) {
 	gconn, err := grpc.DialContext(

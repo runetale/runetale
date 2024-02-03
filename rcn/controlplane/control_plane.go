@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/pion/ice/v2"
-	"github.com/runetale/client-go/Runetale/runetale/v1/machine"
-	"github.com/runetale/client-go/Runetale/runetale/v1/negotiation"
+	"github.com/runetale/client-go/runetale/runetale/v1/machine"
+	"github.com/runetale/client-go/runetale/runetale/v1/negotiation"
 	"github.com/runetale/runetale/client/grpc"
 	"github.com/runetale/runetale/conf"
 	"github.com/runetale/runetale/rcn/rcnsock"
@@ -42,7 +42,7 @@ type ControlPlane struct {
 	ch                  chan struct{}
 	waitForRemoteConnCh chan *webrtc.Ice
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func NewControlPlane(
@@ -52,7 +52,7 @@ func NewControlPlane(
 	mk string,
 	conf *conf.Conf,
 	ch chan struct{},
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) *ControlPlane {
 	return &ControlPlane{
 		signalClient: signalClient,

@@ -82,13 +82,13 @@ func execUp(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	res, err := c.ServerClient.Login(c.MachinePubKey, c.Spec.WgPrivateKey)
+	res, err := c.ServerClient.Join(c.MachinePubKey, c.Spec.WgPrivateKey)
 	if err != nil {
 		runelog.Logger.Warnf("failed to login, %s", err.Error())
 		return nil
 	}
 
-	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaledProcess(runelog) {
+	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaleProcess(runelog) {
 		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
 		fmt.Println("You need to activate runetaled.")
 		return nil
@@ -135,7 +135,7 @@ func execUp(ctx context.Context, args []string) error {
 func upEngine(
 	ctx context.Context,
 	serverClient grpc_client.ServerClientImpl,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 	tunName string,
 	mPubKey string,
 	ip string,
@@ -172,13 +172,13 @@ func upEngine(
 	return nil
 }
 
-func isInstallRunetaledDaemon(runelog *runelog.runelog) bool {
+func isInstallRunetaledDaemon(runelog *runelog.Runelog) bool {
 	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, runelog)
 	_, isInstalled := d.Status()
 	return isInstalled
 }
 
-func isRunningRunetaleProcess(runelog *runelog.runelog) bool {
+func isRunningRunetaleProcess(runelog *runelog.Runelog) bool {
 	p := process.NewProcess(runelog)
 	return p.GetRunetaledProcess()
 }

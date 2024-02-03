@@ -21,7 +21,7 @@ import (
 )
 
 type ServerClientImpl interface {
-	Login(mk, wgPrivKey string) (*machine.LoginResponse, error)
+	Join(mk, wgPrivKey string) (*machine.JoinResponse, error)
 	SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.SyncMachinesResponse, error)
 	ConnectStreamPeerLoginSession(mk string) (*login_session.PeerLoginSessionResponse, error)
 	Connect(mk string) (*daemon.GetConnectionStatusResponse, error)
@@ -35,12 +35,12 @@ type ServerClient struct {
 	loginSessionClient login_session.LoginSessionServiceClient
 	conn               *grpc.ClientConn
 	ctx                context.Context
-	runelog            *runelog.runelog
+	runelog            *runelog.Runelog
 }
 
 func NewServerClient(
 	conn *grpc.ClientConn,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) ServerClientImpl {
 	return &ServerClient{
 		machineClient:      machine.NewMachineServiceClient(conn),
@@ -52,7 +52,7 @@ func NewServerClient(
 	}
 }
 
-func (c *ServerClient) Login(mk, wgPrivKey string) (*machine.LoginResponse, error) {
+func (c *ServerClient) Join(mk, wgPrivKey string) (*machine.JoinResponse, error) {
 	var (
 		ip   string
 		cidr string
@@ -66,7 +66,7 @@ func (c *ServerClient) Login(mk, wgPrivKey string) (*machine.LoginResponse, erro
 	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.WgPubKey: parsedKey.String()})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
-	res, err := c.machineClient.Login(ctx, &emptypb.Empty{})
+	res, err := c.machineClient.Join(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}

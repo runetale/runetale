@@ -11,11 +11,11 @@ import (
 )
 
 type runetaledProcessOnLinux struct {
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func newProcess(
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) Process {
 	return &runetaledProcessOnLinux{
 		runelog: runelog,

@@ -29,12 +29,12 @@ type FileStoreManager interface {
 type FileStore struct {
 	path    string
 	cache   map[StateKey][]byte
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 
 	mu sync.RWMutex
 }
 
-func NewFileStore(path string, runelog *runelog.runelog) (*FileStore, error) {
+func NewFileStore(path string, runelog *runelog.Runelog) (*FileStore, error) {
 	if err := paths.MkStateDir(filepath.Dir(path)); err != nil {
 		return nil, fmt.Errorf("does not creating state directory: %w", err)
 	}

@@ -29,12 +29,12 @@ type daemon struct {
 	// daemon system confi
 	systemConfig string
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func newDaemon(
 	binPath, serviceName, daemonFilePath, systemConfig string,
-	wl *runelog.runelog,
+	wl *runelog.Runelog,
 ) Daemon {
 	return &daemon{
 		binPath:        binPath,

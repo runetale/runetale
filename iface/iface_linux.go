@@ -20,7 +20,7 @@ import (
 )
 
 func isWireGuardModule(
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) bool {
 	_, err := utils.ExecCmd("modinfo wireguard")
 	return err == nil
@@ -28,7 +28,7 @@ func isWireGuardModule(
 
 func CreateIface(
 	i *Iface,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	addr := i.IP + "/" + i.CIDR
 
@@ -44,7 +44,7 @@ func CreateIface(
 
 func RemoveIface(
 	tunname string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	ipCmd, err := exec.LookPath("ip")
 	if err != nil {
@@ -61,7 +61,7 @@ func RemoveIface(
 
 func createWithKernelSpace(
 	ifaceName, privateKey, address string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	ipCmd, err := exec.LookPath("ip")
 	if err != nil {
