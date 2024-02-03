@@ -18,6 +18,6 @@ require (
 	github.com/mdlayher/genetlink v1.2.0 // indirect
 	github.com/pion/ice/v2 v2.2.6
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/runetale/client-go v0.0.0-20240201040348-c3eedc6c3304 // indirect
+	github.com/runetale/client-go v0.0.0-20240203031643-afacff8a7cfa // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
