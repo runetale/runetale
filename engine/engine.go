@@ -18,7 +18,7 @@ import (
 )
 
 type engine struct {
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 
 	mk        string
 	tunName   string
@@ -40,7 +40,7 @@ type engine struct {
 
 func Newengine(
 	serverClient grpc.ServerClientImpl,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 	tunName string,
 	mk string,
 	ip string,

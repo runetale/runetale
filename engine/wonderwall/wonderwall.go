@@ -21,12 +21,12 @@ type WonderWall struct {
 
 	mu *sync.Mutex
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func NewWonderWall(
 	sock *rcnsock.RcnSock,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) *WonderWall {
 	return &WonderWall{
 		sock:    sock,
