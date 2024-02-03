@@ -4,6 +4,8 @@
 
 package daemon
 
+import "github.com/runetale/runetale/runelog"
+
 const (
 	running      = "\t[\033[32mRUNNING\033[0m]"
 	failed       = "\t[\033[31mFAILED\033[0m]"
@@ -20,7 +22,7 @@ type Daemon interface {
 
 func NewDaemon(
 	binPath, serviceName, daemonFilePath, systemConfig string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) Daemon {
 	return newDaemon(binPath, serviceName, daemonFilePath, systemConfig, runelog)
 }

@@ -21,7 +21,7 @@ type upstartRecord struct {
 	// daemon system config
 	systemConfig string
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func (d *upstartRecord) Install() (err error) {

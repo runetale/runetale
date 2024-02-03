@@ -12,7 +12,7 @@ import (
 
 func newDaemon(
 	binPath, serviceName, daemonFilePath, systemConfig string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) Daemon {
 	if _, err := os.Stat("/run/systemd/system"); err == nil {
 		return &systemDRecord{
