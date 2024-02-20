@@ -19,6 +19,6 @@ require (
 	github.com/mdlayher/socket v0.1.1 // indirect
 	github.com/pion/ice/v2 v2.2.6
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/runetale/client-go v0.0.0-20240208082149-c0933ab7faf0 // indirect
+	github.com/runetale/client-go v0.0.0-20240220030804-74d27ed2b9af // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
