@@ -56,7 +56,7 @@ var upCmd = &ffcli.Command{
 }
 
 func execUp(ctx context.Context, args []string) error {
-	runelog, err := runelog.Newrunelog("runetaled up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
+	runelog, err := runelog.NewRunelog("runetaled up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v", err)
 		return nil

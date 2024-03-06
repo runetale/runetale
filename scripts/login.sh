@@ -5,4 +5,3 @@ sudo ./runetale login -signal-host=$SIGNAL_HOST \
     -signal-port=$SIGNAL_PORT \
     -server-port=$SERVER_PORT \
     -debug=$IS_DEBUG \
-    -loglevel=$LOG_LEVEL

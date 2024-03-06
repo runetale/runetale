@@ -14,7 +14,7 @@ import (
 	"github.com/runetale/runetale/distro"
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
-	"github.com/runetale/runetale/wireguard"
+	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -95,7 +95,7 @@ func createWithKernelSpace(
 	}
 
 	fMark := 0
-	port := wireguard.WgPort
+	port := wg.WgPort
 	wgConf := wgtypes.Config{
 		PrivateKey:   &key,
 		ReplacePeers: false,
@@ -158,7 +158,7 @@ func createWithUserSpace(i *Iface, address string) error {
 	}
 
 	fwmark := 0
-	port := wireguard.WgPort
+	port := wg.WgPort
 	config := wgtypes.Config{
 		PrivateKey:   &key,
 		ReplacePeers: false,

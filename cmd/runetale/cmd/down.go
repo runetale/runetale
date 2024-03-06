@@ -37,7 +37,7 @@ var downCmd = &ffcli.Command{
 }
 
 func execDown(ctx context.Context, args []string) error {
-	_, err := runelog.Newrunelog("runetale up", downArgs.logLevel, downArgs.logFile, downArgs.debug)
+	_, err := runelog.NewRunelog("runetale up", downArgs.logLevel, downArgs.logFile, downArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v", err)
 		return nil

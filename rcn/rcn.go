@@ -90,7 +90,7 @@ func (r *Rcn) createIface() error {
 		return err
 	}
 
-	res, err := r.serverClient.Join(r.mk, wgPrivateKey.PublicKey().String())
+	res, err := r.serverClient.LoginMachine(r.mk, wgPrivateKey.PublicKey().String())
 	if err != nil {
 		return err
 	}
