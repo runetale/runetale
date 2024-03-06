@@ -48,7 +48,7 @@ var installDaemonCmd = &ffcli.Command{
 }
 
 func installDaemon(ctx context.Context, args []string) error {
-	runelog, err := runelog.Newrunelog("runetaled daemon", daemonArgs.logLevel, daemonArgs.logFile, daemonArgs.debug)
+	runelog, err := runelog.NewRunelog("runetaled daemon", daemonArgs.logLevel, daemonArgs.logFile, daemonArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v", err)
 		return nil
@@ -71,7 +71,7 @@ var uninstallDaemonCmd = &ffcli.Command{
 }
 
 func uninstallDaemon(ctx context.Context, args []string) error {
-	runelog, err := runelog.Newrunelog("runetaled daemon", daemonArgs.logLevel, daemonArgs.logFile, daemonArgs.debug)
+	runelog, err := runelog.NewRunelog("runetaled daemon", daemonArgs.logLevel, daemonArgs.logFile, daemonArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v", err)
 		return nil

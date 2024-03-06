@@ -48,7 +48,7 @@ var loginCmd = &ffcli.Command{
 }
 
 func execLogin(ctx context.Context, args []string) error {
-	runelog, err := runelog.Newrunelog("runetale login", loginArgs.logLevel, loginArgs.logFile, loginArgs.debug)
+	runelog, err := runelog.NewRunelog("runetale login", loginArgs.logLevel, loginArgs.logFile, loginArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v\n", err)
 		return nil

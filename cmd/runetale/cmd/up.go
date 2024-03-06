@@ -58,7 +58,7 @@ var upCmd = &ffcli.Command{
 // after login, check to see if the runetaled daemon is up.
 // if not, prompt the user to start it.
 func execUp(ctx context.Context, args []string) error {
-	runelog, err := runelog.Newrunelog("runetale up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
+	runelog, err := runelog.NewRunelog("runetale up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v", err)
 		return nil
