@@ -15,6 +15,7 @@ import (
 	"github.com/runetale/client-go/runetale/runetale/v1/rtc"
 	"github.com/runetale/runetale/rcn/conn"
 	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/system"
 	"github.com/runetale/runetale/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -40,6 +41,7 @@ type SignalClientImpl interface {
 }
 
 type SignalClient struct {
+	sysInfo   system.SysInfo
 	negClient negotiation.NegotiationServiceClient
 	rtcClient rtc.RtcServiceClient
 	conn      *grpc.ClientConn
@@ -54,11 +56,13 @@ type SignalClient struct {
 }
 
 func NewSignalClient(
+	sysInfo system.SysInfo,
 	conn *grpc.ClientConn,
 	cs *conn.ConnectState,
 	runelog *runelog.Runelog,
 ) SignalClientImpl {
 	return &SignalClient{
+		sysInfo:   sysInfo,
 		negClient: negotiation.NewNegotiationServiceClient(conn),
 		rtcClient: rtc.NewRtcServiceClient(conn),
 		conn:      conn,
@@ -132,7 +136,6 @@ func (c *SignalClient) Answer(
 // actually connected to grpc stream
 // if StartConnect succeeds, set the Connection's State to Connected
 func (c *SignalClient) connectStream(ctx context.Context) (negotiation.NegotiationService_StartConnectClient, error) {
-
 	stream, err := c.negClient.StartConnect(ctx, grpc.WaitForReady(true))
 	if err != nil {
 		return nil, err
@@ -144,7 +147,7 @@ func (c *SignalClient) connectStream(ctx context.Context) (negotiation.Negotiati
 }
 
 func (c *SignalClient) StartConnect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error {
-	md := metadata.New(map[string]string{utils.MachineKey: mk})
+	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	stream, err := c.connectStream(ctx)

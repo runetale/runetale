@@ -30,6 +30,7 @@ type ServerClientImpl interface {
 }
 
 type ServerClient struct {
+	sysInfo       system.SysInfo
 	machineClient machine.MachineServiceClient
 	daemonClient  daemon.DaemonServiceClient
 	loginClient   login.LoginServiceClient
@@ -39,10 +40,12 @@ type ServerClient struct {
 }
 
 func NewServerClient(
+	sysInfo system.SysInfo,
 	conn *grpc.ClientConn,
 	runelog *runelog.Runelog,
 ) ServerClientImpl {
 	return &ServerClient{
+		sysInfo:       sysInfo,
 		machineClient: machine.NewMachineServiceClient(conn),
 		daemonClient:  daemon.NewDaemonServiceClient(conn),
 		loginClient:   login.NewLoginServiceClient(conn),
@@ -101,8 +104,7 @@ func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login.PeerLogi
 		msg = &login.PeerLoginSessionResponse{}
 	)
 
-	sys := system.NewSysInfo()
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: sys.Hostname, utils.OS: sys.OS})
+	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	stream, err := c.loginClient.StreamPeerLoginSession(newctx, grpc.WaitForReady(true))

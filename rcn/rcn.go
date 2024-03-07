@@ -18,7 +18,6 @@ import (
 	"github.com/runetale/runetale/rcn/controlplane"
 	"github.com/runetale/runetale/rcn/rcnsock"
 	"github.com/runetale/runetale/runelog"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 type Rcn struct {
@@ -84,13 +83,7 @@ func (r *Rcn) Start() {
 }
 
 func (r *Rcn) createIface() error {
-	wgPrivateKey, err := wgtypes.ParseKey(r.conf.Spec.WgPrivateKey)
-	if err != nil {
-		r.runelog.Logger.Warnf("failed to parse wg private key, because %v", err)
-		return err
-	}
-
-	res, err := r.serverClient.LoginMachine(r.mk, wgPrivateKey.PublicKey().String())
+	res, err := r.serverClient.LoginMachine(r.mk, r.conf.Spec.WgPrivateKey)
 	if err != nil {
 		return err
 	}

@@ -103,7 +103,6 @@ func execUp(ctx context.Context, args []string) error {
 		return err
 	}
 
-	runelog.Logger.Infof("starting runetale.\n")
 	go r.Start()
 
 	go func() {
