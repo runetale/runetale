@@ -66,32 +66,8 @@ NOTE: Runetale is currently a work in progress. **We have started rolling out th
 
 NOTE: The guide detailing the technical implementation of runetale will be available soon.
 
-## Key features
-
-- [x] **Kernel-level WireGuard**: Provides fast, encrypted peer-to-peer connectivity utilizing lightweight kernel WireGuard.
-- [x] **Peer Discovery**: Automatically exchanges peer locations and configurations utilizing NAT traversal techniques.
-- [x] **Traffic Relay**: Relays connections (while maintaining end-to-end encryption) even in cases where peer-to-peer connectivity is not possible.
-- [x] **Web UI**: Offers intuitive onboarding and management hosted on our platform.
-- [x] **Single-sign On**: Allows managing peer identities with your preferred SSO.
-
-### Coming soon
-
-Here is the some part of features we are working on.
-
-- [ ] Desktop applications
-  - [ ] Linux
-  - [ ] macOS
-  - [ ] Windows
-- [ ] Mobile applications
-  - [ ] iOS
-  - [ ] Android
-- [ ] Establish connection without installing runetale agenets. (Act as a gateway)
-- [ ] Set up access control lists (ACLs) based on the role, not IPs.
-- [ ] Multi-factor Authentication (MFA) supports.
-- [ ] Manage network routes based on user-defined configurations.
-- [ ] Network activity monitoring
-
-We plan to open our public roadmap as soon as possible. Further innovative and exciting features are to come.
+## Roadmap
+[Roadmap](https://github.com/runetale/runetale/issues/6) can be found here.
 
 ## Decoding "Rune" + "Tale"
 
