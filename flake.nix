@@ -65,7 +65,7 @@
           in pkgs.mkShell {
             buildInputs = with pkgs; [
               protoc-gen-go
-              go_1_17
+              #go_1_19
               goimports
               gopls
               protobuf
@@ -74,6 +74,8 @@
               docker
               sqlite
               wireguard-tools
+              grpcurl
+
             ];
 
             shellHook = ''
