@@ -11,7 +11,7 @@ type Process interface {
 }
 
 func NewProcess(
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) Process {
 	return newProcess(runelog)
 }

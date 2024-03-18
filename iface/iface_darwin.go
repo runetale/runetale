@@ -21,7 +21,7 @@ import (
 
 func CreateIface(
 	i *Iface,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	addr := i.IP + "/" + i.CIDR
 
@@ -52,7 +52,7 @@ func CreateIface(
 
 func RemoveIface(
 	tunname string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	ipCmd, err := exec.LookPath("ifconfig")
 	if err != nil {

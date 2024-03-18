@@ -29,7 +29,7 @@ type systemDRecord struct {
 	// daemon system config
 	systemConfig string
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 // in effect, all it does is call load and start.

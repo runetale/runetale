@@ -24,7 +24,7 @@ type Daemon interface {
 
 func NewDaemon(
 	binPath, serviceName, daemonFilePath, systemConfig string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) Daemon {
 	return newDaemon(binPath, serviceName, daemonFilePath, systemConfig, runelog)
 }

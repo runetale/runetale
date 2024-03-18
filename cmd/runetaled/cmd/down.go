@@ -43,7 +43,7 @@ var downCmd = &ffcli.Command{
 
 // uninstall runetaled and delete wireguard interface
 func execDown(ctx context.Context, args []string) error {
-	runelog, err := runelog.Newrunelog("runetaled down", downArgs.logLevel, downArgs.logFile, downArgs.debug)
+	runelog, err := runelog.NewRunelog("runetaled down", downArgs.logLevel, downArgs.logFile, downArgs.debug)
 	if err != nil {
 		fmt.Println("failed to initialize logger")
 		return nil

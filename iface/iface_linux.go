@@ -14,13 +14,13 @@ import (
 	"github.com/runetale/runetale/distro"
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
-	"github.com/runetale/runetale/wireguard"
+	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 func isWireGuardModule(
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) bool {
 	_, err := utils.ExecCmd("modinfo wireguard")
 	return err == nil
@@ -28,7 +28,7 @@ func isWireGuardModule(
 
 func CreateIface(
 	i *Iface,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	addr := i.IP + "/" + i.CIDR
 
@@ -44,7 +44,7 @@ func CreateIface(
 
 func RemoveIface(
 	tunname string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	ipCmd, err := exec.LookPath("ip")
 	if err != nil {
@@ -61,7 +61,7 @@ func RemoveIface(
 
 func createWithKernelSpace(
 	ifaceName, privateKey, address string,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) error {
 	ipCmd, err := exec.LookPath("ip")
 	if err != nil {
@@ -95,7 +95,7 @@ func createWithKernelSpace(
 	}
 
 	fMark := 0
-	port := wireguard.WgPort
+	port := wg.WgPort
 	wgConf := wgtypes.Config{
 		PrivateKey:   &key,
 		ReplacePeers: false,
@@ -158,7 +158,7 @@ func createWithUserSpace(i *Iface, address string) error {
 	}
 
 	fwmark := 0
-	port := wireguard.WgPort
+	port := wg.WgPort
 	config := wgtypes.Config{
 		PrivateKey:   &key,
 		ReplacePeers: false,

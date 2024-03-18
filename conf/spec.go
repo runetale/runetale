@@ -34,7 +34,7 @@ type Spec struct {
 	path    string
 	isDebug bool
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func NewSpec(
@@ -42,7 +42,7 @@ func NewSpec(
 	serverHost string, serverPort uint,
 	signalHost string, signalPort uint,
 	isDebug bool,
-	dl *runelog.runelog,
+	dl *runelog.Runelog,
 ) (*Spec, error) {
 	return &Spec{
 		ServerHost: serverHost,

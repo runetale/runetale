@@ -36,7 +36,7 @@ var statusDaemonCmd = &ffcli.Command{
 }
 
 func statusDaemon(ctx context.Context, args []string) error {
-	runelog, err := runelog.Newrunelog("runetaled status", statusArgs.logLevel, statusArgs.logFile, statusArgs.debug)
+	runelog, err := runelog.NewRunelog("runetaled status", statusArgs.logLevel, statusArgs.logFile, statusArgs.debug)
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
 		return err

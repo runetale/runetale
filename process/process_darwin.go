@@ -11,11 +11,11 @@ import (
 )
 
 type runetaledProcessOnDarwin struct {
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func newProcess(
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) Process {
 	return &runetaledProcessOnDarwin{
 		runelog: runelog,

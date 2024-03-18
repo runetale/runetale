@@ -73,7 +73,7 @@ type Ice struct {
 
 	failedTimeout *time.Duration
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func NewIce(
@@ -99,7 +99,7 @@ func NewIce(
 	stunTurn *StunTurnConfig,
 	blacklist []string,
 
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 
 	closeCh chan struct{},
 ) *Ice {

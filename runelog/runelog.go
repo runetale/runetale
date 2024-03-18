@@ -24,17 +24,17 @@ const (
 // 	globalLogger *zap.Logger
 // )
 
-type runelog struct {
+type Runelog struct {
 	Logger *zap.SugaredLogger
 }
 
-func Newrunelog(name string, logLevel string, logFile string, dev bool) (*runelog, error) {
+func NewRunelog(name string, logLevel string, logFile string, dev bool) (*Runelog, error) {
 	l, err := initrunelog(logLevel, logFile, dev)
 	if err != nil {
 		return nil, err
 	}
 
-	return &runelog{
+	return &Runelog{
 		Logger: l.Named(name).Sugar(),
 	}, nil
 }

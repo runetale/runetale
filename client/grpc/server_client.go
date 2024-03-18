@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/runetale/client-go/runetale/runetale/v1/daemon"
-	"github.com/runetale/client-go/runetale/runetale/v1/login_session"
+	"github.com/runetale/client-go/runetale/runetale/v1/login"
 	"github.com/runetale/client-go/runetale/runetale/v1/machine"
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/system"
@@ -21,38 +21,38 @@ import (
 )
 
 type ServerClientImpl interface {
-	Login(mk, wgPrivKey string) (*machine.LoginResponse, error)
+	Login(mk, wgPrivKey string) (*login.LoginMachineResponse, error)
 	SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.SyncMachinesResponse, error)
-	ConnectStreamPeerLoginSession(mk string) (*login_session.PeerLoginSessionResponse, error)
+	ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error)
 	Connect(mk string) (*daemon.GetConnectionStatusResponse, error)
 	Disconnect(mk string) (*daemon.GetConnectionStatusResponse, error)
 	GetConnectionStatus(mk string) (*daemon.GetConnectionStatusResponse, error)
 }
 
 type ServerClient struct {
-	machineClient      machine.MachineServiceClient
-	daemonClient       daemon.DaemonServiceClient
-	loginSessionClient login_session.LoginSessionServiceClient
-	conn               *grpc.ClientConn
-	ctx                context.Context
-	runelog            *runelog.runelog
+	machineClient machine.MachineServiceClient
+	daemonClient  daemon.DaemonServiceClient
+	loginClient   login.LoginServiceClient
+	conn          *grpc.ClientConn
+	ctx           context.Context
+	runelog       *runelog.Runelog
 }
 
 func NewServerClient(
 	conn *grpc.ClientConn,
-	runelog *runelog.runelog,
+	runelog *runelog.Runelog,
 ) ServerClientImpl {
 	return &ServerClient{
-		machineClient:      machine.NewMachineServiceClient(conn),
-		daemonClient:       daemon.NewDaemonServiceClient(conn),
-		loginSessionClient: login_session.NewLoginSessionServiceClient(conn),
-		conn:               conn,
-		ctx:                context.Background(),
-		runelog:            runelog,
+		machineClient: machine.NewMachineServiceClient(conn),
+		daemonClient:  daemon.NewDaemonServiceClient(conn),
+		loginClient:   login.NewLoginServiceClient(conn),
+		conn:          conn,
+		ctx:           context.Background(),
+		runelog:       runelog,
 	}
 }
 
-func (c *ServerClient) Login(mk, wgPrivKey string) (*machine.LoginResponse, error) {
+func (c *ServerClient) Login(mk, wgPrivKey string) (*login.LoginMachineResponse, error) {
 	var (
 		ip   string
 		cidr string
@@ -66,7 +66,7 @@ func (c *ServerClient) Login(mk, wgPrivKey string) (*machine.LoginResponse, erro
 	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.WgPubKey: parsedKey.PublicKey().String()})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
-	res, err := c.machineClient.Login(ctx, &emptypb.Empty{})
+	res, err := c.loginClient.LoginMachine(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -96,16 +96,16 @@ func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
 	return msg.Ip, msg.Cidr, nil
 }
 
-func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login_session.PeerLoginSessionResponse, error) {
+func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error) {
 	var (
-		msg = &login_session.PeerLoginSessionResponse{}
+		msg = &login.PeerLoginSessionResponse{}
 	)
 
 	sys := system.NewSysInfo()
 	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: sys.Hostname, utils.OS: sys.OS})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
-	stream, err := c.loginSessionClient.StreamPeerLoginSession(newctx, grpc.WaitForReady(true))
+	stream, err := c.loginClient.StreamPeerLoginSession(newctx, grpc.WaitForReady(true))
 	if err != nil {
 		return nil, err
 	}

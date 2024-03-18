@@ -58,7 +58,7 @@ var upCmd = &ffcli.Command{
 // after login, check to see if the runetaled daemon is up.
 // if not, prompt the user to start it.
 func execUp(ctx context.Context, args []string) error {
-	runelog, err := runelog.Newrunelog("runetale up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
+	runelog, err := runelog.NewRunelog("runetale up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v", err)
 		return nil
@@ -88,7 +88,7 @@ func execUp(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaledProcess(runelog) {
+	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaleProcess(runelog) {
 		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
 		fmt.Println("You need to activate runetaled.")
 		return nil
@@ -172,13 +172,13 @@ func upEngine(
 	return nil
 }
 
-func isInstallRunetaledDaemon(runelog *runelog.runelog) bool {
+func isInstallRunetaledDaemon(runelog *runelog.Runelog) bool {
 	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, runelog)
 	_, isInstalled := d.Status()
 	return isInstalled
 }
 
-func isRunningRunetaleProcess(runelog *runelog.runelog) bool {
+func isRunningRunetaleProcess(runelog *runelog.Runelog) bool {
 	p := process.NewProcess(runelog)
 	return p.GetRunetaledProcess()
 }

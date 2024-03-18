@@ -21,7 +21,7 @@ type systemVRecord struct {
 	// daemon system config
 	systemConfig string
 
-	runelog *runelog.runelog
+	runelog *runelog.Runelog
 }
 
 func (d *systemVRecord) Install() (err error) {
