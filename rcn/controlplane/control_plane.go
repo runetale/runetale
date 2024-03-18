@@ -11,7 +11,6 @@ package controlplane
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -158,54 +157,14 @@ func (c *ControlPlane) receiveSignalRequest(
 	return nil
 }
 
-// through StartConnect, the results of the execution of functions such as
-// candidate required for udp hole punching are received from the engine side
 func (c *ControlPlane) ConnectSignalServer() {
-	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	for _, p := range res.GetRemotePeers() {
-		peer := c.peerConns[p.RemoteClientMachineKey]
-		if peer == nil {
-			var err error
-			peer, err = c.initialOfferForRemotePeer(p.RemoteClientMachineKey)
-			if err != nil {
-				c.runelog.Logger.Errorf("empty remote peer connection, dst remote peer machine key is [%s]", p.RemoteClientMachineKey)
-				fmt.Println(err)
-				return
-			}
-		}
-	}
-
 	go func() {
 		err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
 			c.mu.Lock()
 			defer c.mu.Unlock()
 
-			dstPeerMachineKey := res.GetDstPeerMachineKey()
-			if dstPeerMachineKey == "" {
-				c.runelog.Logger.Errorf("empty dst peer machine key")
-				return errors.New("empty dst peer machine key")
-			}
-
 			peer := c.peerConns[res.GetDstPeerMachineKey()]
 
-			// for initial offer
-			// 2台目が接続した時にここが本来呼ばれるはず
-			// しかし呼ばれていないのでSyncRemoteMachineで対応する？
-			// if peer == nil {
-			// 	var err error
-			// 	peer, err = c.initialOfferForRemotePeer(dstPeerMachineKey)
-			// 	if err != nil {
-			// 		c.runelog.Logger.Errorf("empty remote peer connection, dst remote peer machine key is [%s]", dstPeerMachineKey)
-			// 		return err
-			// 	}
-			// }
-
-			// after the first time
 			err := c.receiveSignalRequest(
 				res.GetDstPeerMachineKey(),
 				res.GetType(),
@@ -227,8 +186,11 @@ func (c *ControlPlane) ConnectSignalServer() {
 	}()
 
 	c.signalClient.WaitStartConnect()
+
+	c.test()
 }
 
+// この関数を実行し、signalOfferを送る
 func (c *ControlPlane) initialOfferForRemotePeer(dstPeerMk string) (*webrtc.Ice, error) {
 	c.runelog.Logger.Debugf("initial connection for [%s]", dstPeerMk)
 
@@ -254,6 +216,22 @@ func (c *ControlPlane) initialOfferForRemotePeer(dstPeerMk string) (*webrtc.Ice,
 
 	// (shinta) is it inherently impossible?
 	return nil, errors.New("failed to initial offer")
+}
+
+func (c *ControlPlane) test() error {
+	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
+	if err != nil {
+		return err
+	}
+
+	for _, p := range res.GetRemotePeers() {
+		_, err := c.initialOfferForRemotePeer(p.RemoteClientMachineKey)
+		if err != nil {
+			return err
+		}
+	}
+
+	return errors.New("failed to initial offer")
 }
 
 // keep the latest state of Peers received from the server
@@ -331,7 +309,6 @@ func (c *ControlPlane) isExistPeer(remoteMachineKey string) bool {
 	return exist
 }
 
-// function to wait until the channel is sent from SetupRemotePeerConn to waitForRemoteConnCh
 func (c *ControlPlane) WaitForRemoteConn() {
 	for {
 		select {
@@ -343,12 +320,14 @@ func (c *ControlPlane) WaitForRemoteConn() {
 
 			c.runelog.Logger.Debugf("starting gathering process for remote machine => [%s]", ice.GetRemoteMachineKey())
 
-			err := ice.ConfigureGatherProcess()
+			err := ice.Setup()
 			if err != nil {
 				c.runelog.Logger.Errorf("failed to configure gathering process for [%s]", ice.GetRemoteMachineKey())
 				continue
 			}
 
+			// answerとofferを待つ
+			// そのあとにofferを送る
 			err = ice.StartGatheringProcess()
 			if err != nil {
 				c.runelog.Logger.Errorf("failed to start gathering process for [%s]", ice.GetRemoteMachineKey())

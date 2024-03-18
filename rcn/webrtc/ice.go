@@ -243,17 +243,6 @@ func (i *Ice) IceSelectedHasCandidatePairChanged(local ice.Candidate, remote ice
 	i.runelog.Logger.Infof("[CANDIDATE COMPLETED] agent candidates were found, local:[%s] <-> remote:[%s]", local.Address(), remote.Address())
 }
 
-// be sure to read this function before using the Ice structures
-func (i *Ice) ConfigureGatherProcess() error {
-	err := i.Setup()
-	if err != nil {
-		i.runelog.Logger.Errorf("failed to configure gather process")
-		return err
-	}
-
-	return nil
-}
-
 func (i *Ice) GetRemoteMachineKey() string {
 	return i.remoteMachineKey
 }
@@ -327,7 +316,6 @@ func (i *Ice) getLocalUserIceAgentCredentials() (string, string, error) {
 	return uname, pwd, nil
 }
 
-// be sure to read ConfigureGatherProcess before calling this function
 // asynchronously waits for a signal process from another peer before sending an offer
 func (i *Ice) StartGatheringProcess() error {
 	// must be done asynchronously, separately from SignalOffer,
@@ -411,6 +399,7 @@ func (i *Ice) waitingRemotePeerConnections() error {
 			err := i.signalAnswer()
 			if err != nil {
 				i.runelog.Logger.Errorf("failed to signal offer, %s", err.Error())
+				return err
 			}
 		}
 
