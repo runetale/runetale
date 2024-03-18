@@ -76,9 +76,9 @@ func (r *Rcn) Start() {
 
 	go r.cp.ConnectSignalServer()
 
-	go r.cp.WaitForRemoteConn()
-
 	go r.cp.SyncRemoteMachine()
+
+	go r.cp.WaitForRemoteConn()
 
 	r.runelog.Logger.Debugf("started rcn")
 }

@@ -337,7 +337,7 @@ func (c *ControlPlane) WaitForRemoteConn() {
 // maintain flexible connections by updating remote machines
 // information on a regular basis, rather than only when other Machines join
 func (c *ControlPlane) SyncRemoteMachine() error {
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
