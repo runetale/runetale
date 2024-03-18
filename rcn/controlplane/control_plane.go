@@ -161,6 +161,25 @@ func (c *ControlPlane) receiveSignalRequest(
 // through StartConnect, the results of the execution of functions such as
 // candidate required for udp hole punching are received from the engine side
 func (c *ControlPlane) ConnectSignalServer() {
+	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for _, p := range res.GetRemotePeers() {
+		peer := c.peerConns[p.RemoteClientMachineKey]
+		if peer == nil {
+			var err error
+			peer, err = c.initialOfferForRemotePeer(p.RemoteClientMachineKey)
+			if err != nil {
+				c.runelog.Logger.Errorf("empty remote peer connection, dst remote peer machine key is [%s]", p.RemoteClientMachineKey)
+				fmt.Println(err)
+				return
+			}
+		}
+	}
+
 	go func() {
 		err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
 			c.mu.Lock()
@@ -177,7 +196,6 @@ func (c *ControlPlane) ConnectSignalServer() {
 			// for initial offer
 			// 2台目が接続した時にここが本来呼ばれるはず
 			// しかし呼ばれていないのでSyncRemoteMachineで対応する？
-			// fmt.Println(peer)
 			// if peer == nil {
 			// 	var err error
 			// 	peer, err = c.initialOfferForRemotePeer(dstPeerMachineKey)
@@ -209,26 +227,6 @@ func (c *ControlPlane) ConnectSignalServer() {
 	}()
 
 	c.signalClient.WaitStartConnect()
-
-	// offer
-	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	if res.GetRemotePeers() != nil {
-		err := c.syncRemotePeerConfig(res.GetRemotePeers())
-		if err != nil {
-			c.runelog.Logger.Errorf("failed to sync remote peer config")
-			fmt.Println(err)
-			return
-		}
-
-		for _, p := range res.GetRemotePeers() {
-			c.initialOfferForRemotePeer(p.GetRemoteClientMachineKey())
-		}
-	}
 }
 
 func (c *ControlPlane) initialOfferForRemotePeer(dstPeerMk string) (*webrtc.Ice, error) {

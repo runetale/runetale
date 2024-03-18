@@ -73,9 +73,9 @@ func (r *Rcn) Start() {
 		r.runelog.Logger.Errorf("failed to set up puncher, %s", err.Error())
 	}
 
-	go r.cp.ConnectSignalServer()
-
 	go r.cp.SyncRemoteMachine()
+
+	go r.cp.ConnectSignalServer()
 
 	go r.cp.WaitForRemoteConn()
 
