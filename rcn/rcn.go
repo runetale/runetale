@@ -75,7 +75,7 @@ func (r *Rcn) Start() {
 
 	go r.cp.WaitForRemoteConn()
 
-	// go r.cp.SyncRemoteMachine()
+	go r.cp.SyncRemoteMachine()
 
 	go r.cp.ConnectSignalServer()
 

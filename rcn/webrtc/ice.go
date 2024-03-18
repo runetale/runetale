@@ -146,8 +146,6 @@ func (i *Ice) Setup() (err error) {
 
 	// configure sigexe
 	//
-	se := NewSigExecuter(i.signalClient, i.remoteMachineKey, i.mk, i.runelog)
-	i.sigexec = se
 
 	// configure ice agent
 	i.udpMuxConn, err = net.ListenUDP("udp4", &net.UDPAddr{Port: 0})
