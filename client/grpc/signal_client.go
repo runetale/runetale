@@ -6,6 +6,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -27,8 +28,7 @@ type SignalClientImpl interface {
 	Candidate(dstmk, srcmk string, candidate ice.Candidate) error
 	Offer(dstmk, srcmk string, uFlag string, pwd string) error
 	Answer(dstmk, srcmk string, uFlag string, pwd string) error
-
-	StartConnect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error
+	Connect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error
 
 	WaitStartConnect()
 	IsReady() bool
@@ -133,27 +133,17 @@ func (c *SignalClient) Answer(
 	return nil
 }
 
-// actually connected to grpc stream
-// if StartConnect succeeds, set the Connection's State to Connected
-func (c *SignalClient) connectStream(ctx context.Context) (negotiation.NegotiationService_StartConnectClient, error) {
-	stream, err := c.negClient.StartConnect(ctx, grpc.WaitForReady(true))
+func (c *SignalClient) Connect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error {
+	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	ctx := metadata.NewOutgoingContext(c.ctx, md)
+
+	stream, err := c.negClient.Connect(ctx, grpc.WaitForReady(true))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// set connState to Connected
 	c.connState.Connected()
-	return stream, nil
-}
-
-func (c *SignalClient) StartConnect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error {
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
-	ctx := metadata.NewOutgoingContext(c.ctx, md)
-
-	stream, err := c.connectStream(ctx)
-	if err != nil {
-		return err
-	}
 
 	defer func() {
 		err := stream.CloseSend()
@@ -165,6 +155,8 @@ func (c *SignalClient) StartConnect(mk string, handler func(msg *negotiation.Neg
 
 	for {
 		msg, err := stream.Recv()
+		fmt.Println(msg)
+		fmt.Println(err)
 		if err == io.EOF {
 			c.runelog.Logger.Errorf("connect stream return to EOF, received by [%s]", mk)
 			return err

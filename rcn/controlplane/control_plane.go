@@ -11,6 +11,7 @@ package controlplane
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -161,7 +162,8 @@ func (c *ControlPlane) receiveSignalRequest(
 // candidate required for udp hole punching are received from the engine side
 func (c *ControlPlane) ConnectSignalServer() {
 	go func() {
-		err := c.signalClient.StartConnect(c.mk, func(res *negotiation.NegotiationRequest) error {
+		err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
+			fmt.Println("connect")
 			c.mu.Lock()
 			defer c.mu.Unlock()
 
