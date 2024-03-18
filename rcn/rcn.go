@@ -83,7 +83,7 @@ func (r *Rcn) Start() {
 }
 
 func (r *Rcn) createIface() error {
-	res, err := r.serverClient.Login(r.mk, r.conf.Spec.WgPrivateKey)
+	res, err := r.serverClient.LoginMachine(r.mk, r.conf.Spec.WgPrivateKey)
 	if err != nil {
 		return err
 	}

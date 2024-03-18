@@ -8,6 +8,7 @@ import (
 	"github.com/runetale/runetale/rcn/conn"
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/store"
+	"github.com/runetale/runetale/system"
 	"google.golang.org/grpc"
 )
 
@@ -61,17 +62,18 @@ func NewConf(
 	spec = spec.CreateSpec()
 
 	option := grpc_client.NewGrpcDialOption(runelog, isDev)
+	sys := system.NewSysInfo()
 
-	runelog.Logger.Infof("connecting to [%s]", spec.GetServerHost())
-	serverClient, err := setupGrpcServerClient(clientCtx, spec.GetServerHost(), runelog, option)
+	runelog.Logger.Infof("connecting to runetale-server => %s]", spec.GetServerHost())
+	serverClient, err := setupGrpcServerClient(*sys, clientCtx, spec.GetServerHost(), runelog, option)
 	if err != nil {
 		runelog.Logger.Warnf("failed to initialize grpc server client. because %v", err)
 		return nil, err
 	}
 	runelog.Logger.Infof("connect succeded [%s]", spec.GetServerHost())
 
-	runelog.Logger.Infof("connecting to [%s]", spec.GetSignalHost())
-	signalClient, err := setupGrpcSignalClient(clientCtx, spec.GetSignalHost(), runelog, option)
+	runelog.Logger.Infof("connecting to runetale-signal-server => %s", spec.GetSignalHost())
+	signalClient, err := setupGrpcSignalClient(*sys, clientCtx, spec.GetSignalHost(), runelog, option)
 	if err != nil {
 		runelog.Logger.Warnf("failed to initialize grpc signal client. because %v", err)
 		return nil, err
@@ -88,6 +90,7 @@ func NewConf(
 }
 
 func setupGrpcServerClient(
+	sysInfo system.SysInfo,
 	clientctx context.Context,
 	url string,
 	runelog *runelog.Runelog,
@@ -100,7 +103,7 @@ func setupGrpcServerClient(
 		grpc.WithBlock(),
 	)
 
-	serverClient := grpc_client.NewServerClient(sconn, runelog)
+	serverClient := grpc_client.NewServerClient(sysInfo, sconn, runelog)
 	if err != nil {
 		runelog.Logger.Warnf("failed to connect server client, because %v", err)
 		return nil, err
@@ -110,6 +113,7 @@ func setupGrpcServerClient(
 }
 
 func setupGrpcSignalClient(
+	sysInfo system.SysInfo,
 	clientctx context.Context,
 	url string,
 	runelog *runelog.Runelog,
@@ -128,7 +132,7 @@ func setupGrpcSignalClient(
 
 	connState := conn.NewConnectedState()
 
-	signalClient := grpc_client.NewSignalClient(gconn, connState, runelog)
+	signalClient := grpc_client.NewSignalClient(sysInfo, gconn, connState, runelog)
 
 	return signalClient, err
 }

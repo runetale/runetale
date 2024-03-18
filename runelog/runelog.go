@@ -29,7 +29,7 @@ type Runelog struct {
 }
 
 func NewRunelog(name string, logLevel string, logFile string, dev bool) (*Runelog, error) {
-	l, err := initrunelog(logLevel, logFile, dev)
+	l, err := initRunelog(logLevel, logFile, dev)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func NewRunelog(name string, logLevel string, logFile string, dev bool) (*Runelo
 	}, nil
 }
 
-func initrunelog(logLevel string, logFile string, dev bool) (*zap.Logger, error) {
+func initRunelog(logLevel string, logFile string, dev bool) (*zap.Logger, error) {
 	var level zapcore.Level
 	switch logLevel {
 	case DebugLevelStr:
