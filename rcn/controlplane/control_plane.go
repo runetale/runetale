@@ -163,7 +163,6 @@ func (c *ControlPlane) receiveSignalRequest(
 func (c *ControlPlane) ConnectSignalServer() {
 	go func() {
 		err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
-			fmt.Println("connect")
 			c.mu.Lock()
 			defer c.mu.Unlock()
 
@@ -176,14 +175,17 @@ func (c *ControlPlane) ConnectSignalServer() {
 			peer := c.peerConns[res.GetDstPeerMachineKey()]
 
 			// for initial offer
-			if peer == nil {
-				var err error
-				peer, err = c.initialOfferForRemotePeer(dstPeerMachineKey)
-				if err != nil {
-					c.runelog.Logger.Errorf("empty remote peer connection, dst remote peer machine key is [%s]", dstPeerMachineKey)
-					return err
-				}
-			}
+			// 2台目が接続した時にここが本来呼ばれるはず
+			// しかし呼ばれていないのでSyncRemoteMachineで対応する？
+			// fmt.Println(peer)
+			// if peer == nil {
+			// 	var err error
+			// 	peer, err = c.initialOfferForRemotePeer(dstPeerMachineKey)
+			// 	if err != nil {
+			// 		c.runelog.Logger.Errorf("empty remote peer connection, dst remote peer machine key is [%s]", dstPeerMachineKey)
+			// 		return err
+			// 	}
+			// }
 
 			// after the first time
 			err := c.receiveSignalRequest(
@@ -205,7 +207,28 @@ func (c *ControlPlane) ConnectSignalServer() {
 			return
 		}
 	}()
+
 	c.signalClient.WaitStartConnect()
+
+	// offer
+	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if res.GetRemotePeers() != nil {
+		err := c.syncRemotePeerConfig(res.GetRemotePeers())
+		if err != nil {
+			c.runelog.Logger.Errorf("failed to sync remote peer config")
+			fmt.Println(err)
+			return
+		}
+
+		for _, p := range res.GetRemotePeers() {
+			c.initialOfferForRemotePeer(p.GetRemoteClientMachineKey())
+		}
+	}
 }
 
 func (c *ControlPlane) initialOfferForRemotePeer(dstPeerMk string) (*webrtc.Ice, error) {
@@ -340,7 +363,7 @@ func (c *ControlPlane) WaitForRemoteConn() {
 // maintain flexible connections by updating remote machines
 // information on a regular basis, rather than only when other Machines join
 func (c *ControlPlane) SyncRemoteMachine() error {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(3 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -349,8 +372,6 @@ func (c *ControlPlane) SyncRemoteMachine() error {
 				return err
 			}
 
-			// TODO: (shinta) compare with existing c.peerConns and update only when there is a difference?
-			// maybe will be good perfomance
 			if res.GetRemotePeers() != nil {
 				err := c.syncRemotePeerConfig(res.GetRemotePeers())
 				if err != nil {

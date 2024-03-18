@@ -6,7 +6,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -155,8 +154,6 @@ func (c *SignalClient) Connect(mk string, handler func(msg *negotiation.Negotiat
 
 	for {
 		msg, err := stream.Recv()
-		fmt.Println(msg)
-		fmt.Println(err)
 		if err == io.EOF {
 			c.runelog.Logger.Errorf("connect stream return to EOF, received by [%s]", mk)
 			return err
