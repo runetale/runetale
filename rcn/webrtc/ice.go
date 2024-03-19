@@ -216,13 +216,13 @@ func (i *Ice) IceConnectionHasBeenChanged(state ice.ConnectionState) {
 	case ice.ConnectionStateChecking: // ConnectionStateNew ICE agent is gathering addresses
 		i.runelog.Logger.Infof("checking agent state, [%s]", state.String())
 	case ice.ConnectionStateConnected: // ConnectionStateConnected ICE agent has a pairing, but is still checking other pairs
-		i.runelog.Logger.Debugf("agent [%s]", state.String())
+		i.runelog.Logger.Infof("agent [%s]", state.String())
 	case ice.ConnectionStateCompleted: // ConnectionStateConnected ICE agent has a pairing, but is still checking other pairs
 		err := i.signalClient.Connected()
 		if err != nil {
 			i.runelog.Logger.Errorf("the agent connection was successful but I received an error in the function that updates the status to connect, [%s]", state.String())
 		}
-		i.runelog.Logger.Debugf("successfully connected to agent, [%s]", state.String())
+		i.runelog.Logger.Infof("successfully connected to agent, [%s]", state.String())
 	case ice.ConnectionStateFailed: // ConnectionStateFailed ICE agent never could successfully connect
 		err := i.signalClient.DisConnected()
 		if err != nil {
