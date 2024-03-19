@@ -11,6 +11,7 @@ package controlplane
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -162,15 +163,6 @@ func (c *ControlPlane) ConnectSignalServer() {
 			c.mu.Lock()
 			defer c.mu.Unlock()
 
-			peer := c.peerConns[res.GetDstPeerMachineKey()]
-			if peer == nil {
-				var err error
-				peer, err = c.initialOfferForRemotePeer()
-				if err != nil {
-					return err
-				}
-			}
-
 			err := c.receiveSignalRequest(
 				res.GetDstPeerMachineKey(),
 				res.GetType(),
@@ -193,12 +185,12 @@ func (c *ControlPlane) ConnectSignalServer() {
 
 	c.signalClient.WaitStartConnect()
 
-	// _, err := c.initialOfferForRemotePeer()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	close(c.ch)
-	// 	return
-	// }
+	_, err := c.initialOfferForRemotePeer()
+	if err != nil {
+		fmt.Println(err)
+		close(c.ch)
+		return
+	}
 }
 
 // 一番最初にpeerがnilの場合に
