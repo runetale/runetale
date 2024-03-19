@@ -401,25 +401,25 @@ func (i *Ice) waitingRemotePeerConnections() error {
 				i.runelog.Logger.Errorf("failed to signal offer, %s", err.Error())
 				return err
 			}
-		case credentials = <-i.remoteCandidateCh:
-			err := i.agent.GatherCandidates()
-			if err != nil {
-				i.runelog.Logger.Errorf("failed to gather candidates, %s", err.Error())
-				return err
-			}
-
-			err = i.startConn(credentials.UserName, credentials.Pwd)
-			if err != nil {
-				i.runelog.Logger.Errorf("failed to start conn, %s", err.Error())
-				return err
-			}
-
-			_, err = i.serverClient.Connect(i.mk)
-			if err != nil {
-				return err
-			}
-			return nil
 		}
+		fmt.Println("start")
+		err := i.agent.GatherCandidates()
+		if err != nil {
+			i.runelog.Logger.Errorf("failed to gather candidates, %s", err.Error())
+			return err
+		}
+
+		err = i.startConn(credentials.UserName, credentials.Pwd)
+		if err != nil {
+			i.runelog.Logger.Errorf("failed to start conn, %s", err.Error())
+			return err
+		}
+
+		_, err = i.serverClient.Connect(i.mk)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 }
 
@@ -487,7 +487,7 @@ func (i *Ice) SendRemoteAnswerCh(remotemk, uname, pwd string) {
 	}
 }
 
-func (i *Ice) SendRemoteCandidate(uname, pwd string, candidate ice.Candidate) {
+func (i *Ice) SendRemoteCandidate(candidate ice.Candidate) {
 	go func() {
 		i.mu.Lock()
 		defer i.mu.Unlock()
@@ -504,7 +504,5 @@ func (i *Ice) SendRemoteCandidate(uname, pwd string, candidate ice.Candidate) {
 		}
 
 		i.runelog.Logger.Infof("send candidate to [%s]", i.remoteMachineKey)
-
-		i.remoteCandidateCh <- *NewCredentials(uname, pwd)
 	}()
 }

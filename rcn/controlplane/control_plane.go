@@ -148,7 +148,7 @@ func (c *ControlPlane) receiveSignalRequest(
 			c.runelog.Logger.Errorf("can not unmarshal candidate => [%s]", candidate)
 			return err
 		}
-		peer.SendRemoteCandidate(uname, pwd, candidate)
+		peer.SendRemoteCandidate(candidate)
 	}
 
 	return nil
