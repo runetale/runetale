@@ -393,23 +393,6 @@ func (i *Ice) waitingRemotePeerConnections() error {
 		select {
 		case credentials = <-i.remoteAnswerCh:
 			i.runelog.Logger.Infof("receive credentials from [%s]", i.remoteMachineKey)
-			err := i.agent.GatherCandidates()
-			if err != nil {
-				i.runelog.Logger.Errorf("failed to gather candidates, %s", err.Error())
-				return err
-			}
-
-			err = i.startConn(credentials.UserName, credentials.Pwd)
-			if err != nil {
-				i.runelog.Logger.Errorf("failed to start conn, %s", err.Error())
-				return err
-			}
-
-			_, err = i.serverClient.Connect(i.mk)
-			if err != nil {
-				return err
-			}
-			return nil
 		case credentials = <-i.remoteOfferCh:
 			i.runelog.Logger.Infof("receive offer from [%s]", i.remoteMachineKey)
 			err := i.signalAnswer()
