@@ -446,7 +446,7 @@ func (i *Ice) signalAnswer() error {
 		return err
 	}
 
-	i.runelog.Logger.Debugf("answer has been sent to the signal server")
+	i.runelog.Logger.Infof("answer has been sent to the signal server")
 
 	return nil
 }
@@ -471,18 +471,18 @@ func (i *Ice) signalOffer() error {
 func (i *Ice) SendRemoteOfferCh(remotemk, uname, pwd string) {
 	select {
 	case i.remoteOfferCh <- *NewCredentials(uname, pwd):
-		i.runelog.Logger.Debugf("send offer to [%s]", remotemk)
+		i.runelog.Logger.Infof("send offer to [%s]", remotemk)
 	default:
-		i.runelog.Logger.Debugf("%s agent waitForSignalingProcess does not seem to have been started", remotemk)
+		i.runelog.Logger.Infof("%s agent waitForSignalingProcess does not seem to have been started", remotemk)
 	}
 }
 
 func (i *Ice) SendRemoteAnswerCh(remotemk, uname, pwd string) {
 	select {
 	case i.remoteAnswerCh <- *NewCredentials(uname, pwd):
-		i.runelog.Logger.Debugf("send answer to [%s]", remotemk)
+		i.runelog.Logger.Infof("send answer to [%s]", remotemk)
 	default:
-		i.runelog.Logger.Debugf("answer skipping message to %s", remotemk)
+		i.runelog.Logger.Infof("answer skipping message to %s", remotemk)
 	}
 }
 
