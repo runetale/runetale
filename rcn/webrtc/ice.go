@@ -392,9 +392,26 @@ func (i *Ice) waitingRemotePeerConnections() error {
 	for {
 		select {
 		case credentials = <-i.remoteAnswerCh:
-			i.runelog.Logger.Debugf("receive credentials from [%s]", i.remoteMachineKey)
+			i.runelog.Logger.Infof("receive credentials from [%s]", i.remoteMachineKey)
+			err := i.agent.GatherCandidates()
+			if err != nil {
+				i.runelog.Logger.Errorf("failed to gather candidates, %s", err.Error())
+				return err
+			}
+
+			err = i.startConn(credentials.UserName, credentials.Pwd)
+			if err != nil {
+				i.runelog.Logger.Errorf("failed to start conn, %s", err.Error())
+				return err
+			}
+
+			_, err = i.serverClient.Connect(i.mk)
+			if err != nil {
+				return err
+			}
+			return nil
 		case credentials = <-i.remoteOfferCh:
-			i.runelog.Logger.Debugf("receive offer from [%s]", i.remoteMachineKey)
+			i.runelog.Logger.Infof("receive offer from [%s]", i.remoteMachineKey)
 			err := i.signalAnswer()
 			if err != nil {
 				i.runelog.Logger.Errorf("failed to signal offer, %s", err.Error())
@@ -446,7 +463,7 @@ func (i *Ice) signalAnswer() error {
 		return err
 	}
 
-	i.runelog.Logger.Infof("answer has been sent to the signal server")
+	i.runelog.Logger.Infof(fmt.Sprintf("send answer to [%s]", i.remoteMachineKey))
 
 	return nil
 }
@@ -480,7 +497,6 @@ func (i *Ice) SendRemoteOfferCh(remotemk, uname, pwd string) {
 func (i *Ice) SendRemoteAnswerCh(remotemk, uname, pwd string) {
 	select {
 	case i.remoteAnswerCh <- *NewCredentials(uname, pwd):
-		i.runelog.Logger.Infof("send answer to [%s]", remotemk)
 	default:
 		i.runelog.Logger.Infof("answer skipping message to %s", remotemk)
 	}
