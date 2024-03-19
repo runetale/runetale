@@ -67,7 +67,7 @@ func NewConn(
 
 func (c *Conn) Start() error {
 	var err error
-	if c.wgPubKey > c.remoteWgPubKey {
+	if c.wgPubKey < c.remoteWgPubKey {
 		c.remoteConn, err = c.agent.Dial(c.ctx, c.uname, c.pwd)
 		if err != nil {
 			c.runelog.Logger.Errorf("failed to dial agent")
