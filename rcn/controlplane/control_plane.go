@@ -139,19 +139,16 @@ func (c *ControlPlane) receiveSignalRequest(
 ) error {
 	switch msgType {
 	case negotiation.NegotiationType_ANSWER:
-		c.runelog.Logger.Infof("ANSWER: [%s] sending answer to [%s]", peer.GetLocalMachineKey(), peer.GetRemoteMachineKey())
 		peer.SendRemoteAnswerCh(remotemk, uname, pwd)
 	case negotiation.NegotiationType_OFFER:
-		c.runelog.Logger.Infof("OFFER: [%s] sending offer to [%s]", peer.GetLocalMachineKey(), peer.GetRemoteMachineKey())
 		peer.SendRemoteOfferCh(remotemk, uname, pwd)
 	case negotiation.NegotiationType_CANDIDATE:
-		c.runelog.Logger.Debugf("[%s] is sending candidate to [%s]", peer.GetLocalMachineKey(), peer.GetRemoteMachineKey())
 		candidate, err := ice.UnmarshalCandidate(candidate)
 		if err != nil {
 			c.runelog.Logger.Errorf("can not unmarshal candidate => [%s]", candidate)
 			return err
 		}
-		peer.SendRemoteCandidate(candidate)
+		peer.SendRemoteCandidate(uname, pwd, candidate)
 	}
 
 	return nil
