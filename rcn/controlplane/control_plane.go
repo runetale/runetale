@@ -11,6 +11,7 @@ package controlplane
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -184,7 +185,12 @@ func (c *ControlPlane) ConnectSignalServer() {
 
 	c.signalClient.WaitStartConnect()
 
-	c.initialOfferForRemotePeer()
+	_, err := c.initialOfferForRemotePeer()
+	if err != nil {
+		fmt.Println(err)
+		close(c.ch)
+		return
+	}
 }
 
 // 一番最初にpeerがnilの場合に
