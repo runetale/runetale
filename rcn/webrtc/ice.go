@@ -502,6 +502,6 @@ func (i *Ice) SendRemoteCandidate(candidate ice.Candidate) {
 			return
 		}
 
-		i.runelog.Logger.Debugf("send candidate to [%s]", i.remoteMachineKey)
+		i.runelog.Logger.Infof("send candidate to [%s]", i.remoteMachineKey)
 	}()
 }
