@@ -11,7 +11,6 @@ package controlplane
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -184,17 +183,11 @@ func (c *ControlPlane) ConnectSignalServer() {
 
 	_, err := c.initialOfferForRemotePeer()
 	if err != nil {
-		fmt.Println(err)
 		close(c.ch)
 		return
 	}
 }
 
-// 一番最初にpeerがnilの場合に
-// そのpeerのmkにiceをセットアップし、
-// WaitForRemoteConnのwaitForRemoteConnChでiceのセットアップとofferとanswerを待つ
-
-// offerをc.waitRemoteConnCh越しで送ってる
 func (c *ControlPlane) initialOfferForRemotePeer() (*webrtc.Ice, error) {
 	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
 	if err != nil {
@@ -308,8 +301,6 @@ func (c *ControlPlane) WaitForRemoteConn() {
 				continue
 			}
 
-			// answerとofferを待つ
-			// そのあとにofferを送る
 			err = ice.StartGatheringProcess()
 			if err != nil {
 				c.runelog.Logger.Errorf("failed to start gathering process for [%s]", ice.GetRemoteMachineKey())
@@ -322,7 +313,6 @@ func (c *ControlPlane) WaitForRemoteConn() {
 // maintain flexible connections by updating remote machines
 // information on a regular basis, rather than only when other Machines join
 func (c *ControlPlane) SyncRemoteMachine() error {
-	// todo:(gx14ac) fix
 	for {
 		res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
 		if err != nil {

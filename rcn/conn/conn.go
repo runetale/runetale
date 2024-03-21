@@ -6,7 +6,6 @@ package conn
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/pion/ice/v2"
@@ -68,8 +67,6 @@ func NewConn(
 
 func (c *Conn) Start() error {
 	var err error
-	fmt.Println(c.wgPubKey)
-	fmt.Println(c.remoteWgPubKey)
 	if c.wgPubKey < c.remoteWgPubKey {
 		c.remoteConn, err = c.agent.Dial(c.ctx, c.uname, c.pwd)
 		if err != nil {

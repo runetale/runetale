@@ -50,12 +50,12 @@ type Ice struct {
 	stunTurn *StunTurnConfig
 
 	// remote
-	remoteWgPubKey   string //
+	remoteWgPubKey   string
 	remoteIp         string
 	remoteMachineKey string
 
 	// local
-	wgPubKey     string //
+	wgPubKey     string
 	wgPrivKey    wgtypes.Key
 	wgIface      string
 	wgPort       int
