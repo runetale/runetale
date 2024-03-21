@@ -410,10 +410,6 @@ func (i *Ice) waitingRemotePeerConnections() error {
 			return err
 		}
 
-		fmt.Println("remote uname and pwd")
-		fmt.Println(credentials.UserName)
-		fmt.Println(credentials.Pwd)
-
 		err = i.startConn(credentials.UserName, credentials.Pwd)
 		if err != nil {
 			i.runelog.Logger.Errorf("failed to start conn, %s", err.Error())
