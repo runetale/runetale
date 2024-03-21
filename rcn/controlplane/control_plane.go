@@ -13,7 +13,6 @@ import (
 	"errors"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/pion/ice/v2"
 	"github.com/runetale/client-go/runetale/runetale/v1/machine"
@@ -38,7 +37,8 @@ type ControlPlane struct {
 	conf      *conf.Conf
 	stconf    *webrtc.StunTurnConfig
 
-	mu                  *sync.Mutex
+	mu *sync.Mutex
+
 	ch                  chan struct{}
 	waitForRemoteConnCh chan *webrtc.Ice
 
@@ -138,13 +138,10 @@ func (c *ControlPlane) receiveSignalRequest(
 ) error {
 	switch msgType {
 	case negotiation.NegotiationType_ANSWER:
-		c.runelog.Logger.Debugf("[%s] is sending answer to [%s]", peer.GetLocalMachineKey(), peer.GetRemoteMachineKey())
 		peer.SendRemoteAnswerCh(remotemk, uname, pwd)
 	case negotiation.NegotiationType_OFFER:
-		c.runelog.Logger.Debugf("[%s] is sending offer to [%s]", peer.GetLocalMachineKey(), peer.GetRemoteMachineKey())
 		peer.SendRemoteOfferCh(remotemk, uname, pwd)
 	case negotiation.NegotiationType_CANDIDATE:
-		c.runelog.Logger.Debugf("[%s] is sending candidate to [%s]", peer.GetLocalMachineKey(), peer.GetRemoteMachineKey())
 		candidate, err := ice.UnmarshalCandidate(candidate)
 		if err != nil {
 			c.runelog.Logger.Errorf("can not unmarshal candidate => [%s]", candidate)
@@ -156,37 +153,16 @@ func (c *ControlPlane) receiveSignalRequest(
 	return nil
 }
 
-// through StartConnect, the results of the execution of functions such as
-// candidate required for udp hole punching are received from the engine side
 func (c *ControlPlane) ConnectSignalServer() {
 	go func() {
-		err := c.signalClient.StartConnect(c.mk, func(res *negotiation.NegotiationRequest) error {
+		err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
 			c.mu.Lock()
 			defer c.mu.Unlock()
 
-			dstPeerMachineKey := res.GetDstPeerMachineKey()
-			if dstPeerMachineKey == "" {
-				c.runelog.Logger.Errorf("empty dst peer machine key")
-				return errors.New("empty dst peer machine key")
-			}
-
-			peer := c.peerConns[res.GetDstPeerMachineKey()]
-
-			// for initial offer
-			if peer == nil {
-				var err error
-				peer, err = c.initialOfferForRemotePeer(dstPeerMachineKey)
-				if err != nil {
-					c.runelog.Logger.Errorf("empty remote peer connection, dst remote peer machine key is [%s]", dstPeerMachineKey)
-					return err
-				}
-			}
-
-			// after the first time
 			err := c.receiveSignalRequest(
 				res.GetDstPeerMachineKey(),
 				res.GetType(),
-				peer,
+				c.peerConns[res.GetDstPeerMachineKey()],
 				res.GetUFlag(),
 				res.GetPwd(),
 				res.GetCandidate(),
@@ -202,30 +178,31 @@ func (c *ControlPlane) ConnectSignalServer() {
 			return
 		}
 	}()
+
 	c.signalClient.WaitStartConnect()
+
+	_, err := c.initialOfferForRemotePeer()
+	if err != nil {
+		close(c.ch)
+		return
+	}
 }
 
-func (c *ControlPlane) initialOfferForRemotePeer(dstPeerMk string) (*webrtc.Ice, error) {
-	c.runelog.Logger.Debugf("initial connection for [%s]", dstPeerMk)
-
+func (c *ControlPlane) initialOfferForRemotePeer() (*webrtc.Ice, error) {
 	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, rp := range res.GetRemotePeers() {
-		if rp.RemoteClientMachineKey != dstPeerMk {
-			continue
-		}
-
-		i, err := c.configureIce(rp, res.Ip, res.Cidr)
+		i, err := c.newIce(rp, res.Ip, res.Cidr)
 		if err != nil {
 			return nil, err
 		}
 
-		c.peerConns[dstPeerMk] = i
+		c.peerConns[rp.RemoteClientMachineKey] = i
 		c.waitForRemoteConnCh <- i
-		return c.peerConns[dstPeerMk], nil
+		return c.peerConns[rp.RemoteClientMachineKey], nil
 	}
 
 	// (shinta) is it inherently impossible?
@@ -263,8 +240,8 @@ func (c *ControlPlane) syncRemotePeerConfig(remotePeers []*machine.RemotePeer) e
 	return nil
 }
 
-func (c *ControlPlane) configureIce(peer *machine.RemotePeer, myip, mycidr string) (*webrtc.Ice, error) {
-	k, err := wgtypes.ParseKey(c.conf.MachinePubKey)
+func (c *ControlPlane) newIce(peer *machine.RemotePeer, myip, mycidr string) (*webrtc.Ice, error) {
+	k, err := wgtypes.ParseKey(c.conf.Spec.WgPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +284,6 @@ func (c *ControlPlane) isExistPeer(remoteMachineKey string) bool {
 	return exist
 }
 
-// function to wait until the channel is sent from SetupRemotePeerConn to waitForRemoteConnCh
 func (c *ControlPlane) WaitForRemoteConn() {
 	for {
 		select {
@@ -319,7 +295,7 @@ func (c *ControlPlane) WaitForRemoteConn() {
 
 			c.runelog.Logger.Debugf("starting gathering process for remote machine => [%s]", ice.GetRemoteMachineKey())
 
-			err := ice.ConfigureGatherProcess()
+			err := ice.Setup()
 			if err != nil {
 				c.runelog.Logger.Errorf("failed to configure gathering process for [%s]", ice.GetRemoteMachineKey())
 				continue
@@ -337,23 +313,17 @@ func (c *ControlPlane) WaitForRemoteConn() {
 // maintain flexible connections by updating remote machines
 // information on a regular basis, rather than only when other Machines join
 func (c *ControlPlane) SyncRemoteMachine() error {
-	ticker := time.NewTicker(1 * time.Minute)
 	for {
-		select {
-		case <-ticker.C:
-			res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
-			if err != nil {
-				return err
-			}
+		res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
+		if err != nil {
+			return err
+		}
 
-			// TODO: (shinta) compare with existing c.peerConns and update only when there is a difference?
-			// maybe will be good perfomance
-			if res.GetRemotePeers() != nil {
-				err := c.syncRemotePeerConfig(res.GetRemotePeers())
-				if err != nil {
-					c.runelog.Logger.Errorf("failed to sync remote peer config")
-					return err
-				}
+		if res.GetRemotePeers() != nil {
+			err := c.syncRemotePeerConfig(res.GetRemotePeers())
+			if err != nil {
+				c.runelog.Logger.Errorf("failed to sync remote peer config")
+				return err
 			}
 		}
 	}

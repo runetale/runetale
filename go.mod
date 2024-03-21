@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/peterbourgon/ff/v2 v2.0.1
+	github.com/runetale/client-go v0.0.0-20240318111708-ca70cfd6bea4
 	go.uber.org/zap v1.21.0
 	go4.org/mem v0.0.0-20210711025021-927187094b94
 	golang.org/x/net v0.18.0
@@ -16,9 +17,6 @@ require (
 
 require (
 	github.com/mdlayher/genetlink v1.2.0 // indirect
-	github.com/mdlayher/socket v0.1.1 // indirect
 	github.com/pion/ice/v2 v2.2.6
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/runetale/client-go v0.0.0-20240220132340-7bd37c5c766f // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

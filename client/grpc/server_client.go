@@ -66,7 +66,7 @@ func (c *ServerClient) LoginMachine(mk, wgPrivKey string) (*login.LoginMachineRe
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.WgPubKey: parsedKey.String()})
+	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.WgPubKey: parsedKey.PublicKey().String()})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	res, err := c.loginClient.LoginMachine(ctx, &emptypb.Empty{})
@@ -91,7 +91,7 @@ func (c *ServerClient) LoginMachine(mk, wgPrivKey string) (*login.LoginMachineRe
 }
 
 func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
-	fmt.Printf("please log in via this link => %s\n", url)
+	fmt.Printf("please login via this link => %s\n", url)
 	msg, err := c.ConnectStreamPeerLoginSession(mk)
 	if err != nil {
 		return "", "", err

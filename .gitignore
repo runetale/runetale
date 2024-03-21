@@ -53,5 +53,5 @@ go.work
 
 # bin
 /bin
-/runetale
-/runetaled
+runetale
+runetaled
