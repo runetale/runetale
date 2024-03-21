@@ -466,10 +466,6 @@ func (i *Ice) signalOffer() error {
 		return err
 	}
 
-	fmt.Println("local uname and pwd")
-	fmt.Println(uname)
-	fmt.Println(pwd)
-
 	err = i.sigexec.Offer(uname, pwd)
 	if err != nil {
 		return err

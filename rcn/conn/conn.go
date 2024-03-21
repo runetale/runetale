@@ -6,6 +6,7 @@ package conn
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/pion/ice/v2"
@@ -67,20 +68,21 @@ func NewConn(
 
 func (c *Conn) Start() error {
 	var err error
+	fmt.Println(c.wgPubKey < c.remoteWgPubKey)
 	if c.wgPubKey < c.remoteWgPubKey {
 		c.remoteConn, err = c.agent.Dial(c.ctx, c.uname, c.pwd)
 		if err != nil {
 			c.runelog.Logger.Errorf("failed to dial agent")
 			return err
 		}
-		c.runelog.Logger.Debugf("completed dial agent")
+		c.runelog.Logger.Infof("completed dial agent")
 	} else {
 		c.remoteConn, err = c.agent.Accept(c.ctx, c.uname, c.pwd)
 		if err != nil {
 			c.runelog.Logger.Errorf("failed to accept agent")
 			return err
 		}
-		c.runelog.Logger.Debugf("completed accept agent")
+		c.runelog.Logger.Infof("completed accept agent")
 	}
 
 	err = c.wireproxy.StartProxy(c.remoteConn)
