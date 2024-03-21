@@ -248,7 +248,7 @@ func (c *ControlPlane) syncRemotePeerConfig(remotePeers []*machine.RemotePeer) e
 }
 
 func (c *ControlPlane) newIce(peer *machine.RemotePeer, myip, mycidr string) (*webrtc.Ice, error) {
-	k, err := wgtypes.ParseKey(c.conf.MachinePubKey)
+	k, err := wgtypes.ParseKey(c.conf.Spec.WgPrivateKey)
 	if err != nil {
 		return nil, err
 	}
