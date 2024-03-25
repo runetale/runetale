@@ -80,15 +80,12 @@ type Ice struct {
 func NewIce(
 	signalClient grpc.SignalClientImpl,
 	serverClient grpc.ServerClientImpl,
-
 	sock *rcnsock.RcnSock,
 
-	// remote
 	remoteWgPubKey string,
 	remoteip string,
 	remoteMachineKey string,
 
-	// yours
 	ip string,
 	cidr string,
 	wgPrivateKey wgtypes.Key,
@@ -347,6 +344,8 @@ func (i *Ice) startConn(uname, pwd string) error {
 		return err
 	}
 
+	i.ConnectSock()
+
 	return nil
 }
 
@@ -403,7 +402,6 @@ func (i *Ice) waitingRemotePeerConnections() error {
 			}
 		}
 
-		// answerが呼ばれた時にくる
 		err := i.agent.GatherCandidates()
 		if err != nil {
 			i.runelog.Logger.Errorf("failed to gather candidates, %s", err.Error())

@@ -87,8 +87,6 @@ func (d *engine) startWonderWall() {
 	ww.Start()
 }
 
-// TODO(snt) connect to grpc server
-// engine communicates with runetaled via sockets and servers in a nice way
 func (d *engine) Start() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()

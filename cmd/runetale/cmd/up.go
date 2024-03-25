@@ -90,7 +90,6 @@ func execUp(ctx context.Context, args []string) error {
 
 	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaleProcess(runelog) {
 		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
-		fmt.Println("You need to activate runetaled.")
 		return nil
 	}
 
@@ -162,7 +161,6 @@ func upEngine(
 		return err
 	}
 
-	// start engine
 	err = engine.Start()
 	if err != nil {
 		runelog.Logger.Warnf("failed to start engine. because %v", err)
