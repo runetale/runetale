@@ -64,7 +64,7 @@ func NewConf(
 	option := grpc_client.NewGrpcDialOption(runelog, isDev)
 	sys := system.NewSysInfo()
 
-	runelog.Logger.Infof("connecting to runetale-server => %s]", spec.GetServerHost())
+	runelog.Logger.Infof("connecting to runetale-server => %s", spec.GetServerHost())
 	serverClient, err := setupGrpcServerClient(*sys, clientCtx, spec.GetServerHost(), runelog, option)
 	if err != nil {
 		runelog.Logger.Warnf("failed to initialize grpc server client. because %v", err)

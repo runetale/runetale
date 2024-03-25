@@ -45,6 +45,9 @@ func NewIface(
 	}
 }
 
+// Can I just allowip one of them?
+// After UDP Hole Punching, it should probably get through.
+
 func (i *Iface) ConfigureToRemotePeer(
 	remotePeerPubKey, remoteip string,
 	endpoint *net.UDPAddr,
