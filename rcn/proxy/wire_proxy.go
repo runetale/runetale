@@ -210,7 +210,7 @@ func (w *WireProxy) StartProxy(remote *ice.Conn) error {
 }
 
 func (w *WireProxy) startMon() {
-	w.runelog.Logger.Debugf("starting monitoring proxy")
+	w.runelog.Logger.Infof("starting mon")
 	go w.monLocalToRemoteProxy()
 	go w.monRemoteToLocalProxy()
 }
@@ -224,13 +224,13 @@ func (w *WireProxy) monLocalToRemoteProxy() {
 		default:
 			n, err := w.localConn.Read(buf)
 			if err != nil {
-				// w.runelog.Logger.Errorf("localConn cannot read remoteProxyBuffer [%s], size is %d", string(buf), n)
+				w.runelog.Logger.Errorf("localConn cannot read remoteProxyBuffer [%s], size is %d", string(buf), n)
 				continue
 			}
 
 			_, err = w.remoteConn.Write(buf[:n])
 			if err != nil {
-				// w.runelog.Logger.Errorf("localConn cannot write remoteProxyBuffer [%s], size is %d", string(buf), n)
+				w.runelog.Logger.Errorf("localConn cannot write remoteProxyBuffer [%s], size is %d", string(buf), n)
 				continue
 			}
 
@@ -250,13 +250,13 @@ func (w *WireProxy) monRemoteToLocalProxy() {
 		default:
 			n, err := w.remoteConn.Read(buf)
 			if err != nil {
-				// w.runelog.Logger.Errorf("remoteConn cannot read localProxyBuffer [%s], size is %d", string(buf), n)
+				w.runelog.Logger.Errorf("remoteConn cannot read localProxyBuffer [%s], size is %d", string(buf), n)
 				continue
 			}
 
 			_, err = w.localConn.Write(buf[:n])
 			if err != nil {
-				// w.runelog.Logger.Errorf("localConn cannot write localProxyBuffer [%s], size is %d", string(buf), n)
+				w.runelog.Logger.Errorf("localConn cannot write localProxyBuffer [%s], size is %d", string(buf), n)
 				continue
 			}
 
