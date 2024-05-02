@@ -1470,6 +1470,8 @@ github.com/runetale/client-go v0.0.0-20240328064438-64c64c295eef h1:bdgIWOd0fUsY
 github.com/runetale/client-go v0.0.0-20240328064438-64c64c295eef/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
 github.com/runetale/client-go v0.0.0-20240421031019-f51ede8f8e27 h1:nAF5sA0Ja2G3RGgOduwB4a0RR+lhIyvxzoFcywf/Go0=
 github.com/runetale/client-go v0.0.0-20240421031019-f51ede8f8e27/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
+github.com/runetale/client-go v0.0.0-20240427032852-39f9647942cb h1:uY9o5cuicsZFmhIfnCt/TYiOybiYZBIRw7nikJRQxWE=
+github.com/runetale/client-go v0.0.0-20240427032852-39f9647942cb/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
 github.com/ruudk/golang-pdf417 v0.0.0-20181029194003-1af4ab5afa58/go.mod h1:6lfFZQK844Gfx8o5WFuvpxWRwnSoipWe/p622j1v06w=
 github.com/ruudk/golang-pdf417 v0.0.0-20201230142125-a7e3863a1245/go.mod h1:pQAZKsJ8yyVxGRWYNEm9oFB8ieLgKFnamEyDmSA0BRk=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
