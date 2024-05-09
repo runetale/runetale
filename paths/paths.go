@@ -35,7 +35,7 @@ func DefaultClientLogFile() string {
 }
 
 func DefaultRunetaledLogFile() string {
-	return "var/log/runetaled/client.log"
+	return "/var/log/runetaled/client.log"
 }
 
 func MkStateDir(dirPath string) error {
