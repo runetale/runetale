@@ -91,11 +91,16 @@ func (c *ServerClient) LoginMachine(mk, wgPrivKey string) (*login.LoginMachineRe
 }
 
 func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
-	fmt.Printf("please login via this link => %s\n", url)
+	err := utils.OpenBrowser(url)
+	if err != nil {
+		return "", "", err
+	}
+
 	msg, err := c.ConnectStreamPeerLoginSession(mk)
 	if err != nil {
 		return "", "", err
 	}
+
 	return msg.Ip, msg.Cidr, nil
 }
 
