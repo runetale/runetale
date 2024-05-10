@@ -4,6 +4,13 @@
 
 package system
 
+type RunetaleNodeType string
+
+const (
+	Resource RunetaleNodeType = "RESOURCE"
+	Device   RunetaleNodeType = "DEVICE"
+)
+
 type SysInfo struct {
 	GoOS      string
 	Kernel    string
@@ -14,6 +21,7 @@ type SysInfo struct {
 	Hostname  string
 	CPUs      int
 	Version   string
+	NodeType  RunetaleNodeType
 }
 
 func NewSysInfo() *SysInfo {

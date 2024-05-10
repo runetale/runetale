@@ -15,15 +15,15 @@ import (
 )
 
 func GetInfo() *SysInfo {
-	info := _getInfo()
+	info := getInfo()
 	for strings.Contains(info, "broken pipe") {
-		info = _getInfo()
+		info = getInfo()
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	releaseInfo := _getReleaseInfo()
+	releaseInfo := getReleaseInfo()
 	for strings.Contains(info, "broken pipe") {
-		releaseInfo = _getReleaseInfo()
+		releaseInfo = getReleaseInfo()
 		time.Sleep(500 * time.Millisecond)
 	}
 
@@ -46,13 +46,22 @@ func GetInfo() *SysInfo {
 	if osName == "" {
 		osName = osInfo[3]
 	}
-	gio := &SysInfo{Kernel: osInfo[0], Core: osInfo[1], Platform: osInfo[2], OS: osName, OSVersion: osVer, GoOS: runtime.GOOS, CPUs: runtime.NumCPU()}
+	gio := &SysInfo{
+		Kernel:    osInfo[0],
+		Core:      osInfo[1],
+		Platform:  osInfo[2],
+		OS:        osName,
+		OSVersion: osVer,
+		GoOS:      runtime.GOOS,
+		CPUs:      runtime.NumCPU(),
+		NodeType:  Resource,
+	}
 	gio.Hostname, _ = os.Hostname()
 
 	return gio
 }
 
-func _getInfo() string {
+func getInfo() string {
 	cmd := exec.Command("uname", "-srio")
 	cmd.Stdin = strings.NewReader("some")
 	var out bytes.Buffer
@@ -66,7 +75,7 @@ func _getInfo() string {
 	return out.String()
 }
 
-func _getReleaseInfo() string {
+func getReleaseInfo() string {
 	cmd := exec.Command("cat", "/etc/os-release")
 	cmd.Stdin = strings.NewReader("some")
 	var out bytes.Buffer
