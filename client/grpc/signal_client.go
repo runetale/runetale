@@ -133,7 +133,7 @@ func (c *SignalClient) Answer(
 }
 
 func (c *SignalClient) Connect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error {
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS, utils.NodeType: string(c.sysInfo.NodeType)})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	stream, err := c.negClient.Connect(ctx, grpc.WaitForReady(true))

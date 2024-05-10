@@ -9,4 +9,5 @@ const (
 	OS         = "os"
 	HostName   = "hostname"
 	WgPubKey   = "wg-pub-key"
+	NodeType   = "node-type"
 )
