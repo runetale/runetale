@@ -109,7 +109,7 @@ func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login.PeerLogi
 		msg = &login.PeerLoginSessionResponse{}
 	)
 
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS, utils.NodeType: string(c.sysInfo.NodeType)})
+	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	stream, err := c.loginClient.StreamPeerLoginSession(newctx, grpc.WaitForReady(true))

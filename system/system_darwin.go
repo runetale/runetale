@@ -31,7 +31,6 @@ func GetInfo() *SysInfo {
 		OS:        osInfo[0],
 		GoOS:      runtime.GOOS,
 		CPUs:      runtime.NumCPU(),
-		NodeType:  Device,
 	}
 	gio.Hostname, _ = os.Hostname()
 	return gio
