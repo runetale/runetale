@@ -54,7 +54,6 @@ func GetInfo() *SysInfo {
 		OSVersion: osVer,
 		GoOS:      runtime.GOOS,
 		CPUs:      runtime.NumCPU(),
-		NodeType:  Resource,
 	}
 	gio.Hostname, _ = os.Hostname()
 
