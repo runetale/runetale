@@ -26,14 +26,15 @@ import (
 )
 
 var upArgs struct {
-	clientPath string
-	serverHost string
-	serverPort int64
-	signalHost string
-	signalPort int64
-	logFile    string
-	logLevel   string
-	debug      bool
+	clientPath  string
+	accessToken string
+	serverHost  string
+	serverPort  int64
+	signalHost  string
+	signalPort  int64
+	logFile     string
+	logLevel    string
+	debug       bool
 }
 
 var upCmd = &ffcli.Command{
@@ -44,6 +45,7 @@ var upCmd = &ffcli.Command{
 		fs := flag.NewFlagSet("up", flag.ExitOnError)
 		fs.StringVar(&upArgs.clientPath, "path", paths.DefaultClientConfigFile(), "client default config file")
 		fs.StringVar(&upArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "server host")
+		fs.StringVar(&upArgs.accessToken, "access-token", "", "launch peer with access token")
 		fs.Int64Var(&upArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
 		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
@@ -82,14 +84,20 @@ func execUp(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	res, err := c.ServerClient.LoginMachine(c.MachinePubKey, c.Spec.WgPrivateKey)
-	if err != nil {
-		runelog.Logger.Warnf("failed to login, %s", err.Error())
+	// todo: (snt)
+	// if does'nt activated runetaled, we have to re-activating runetale.
+	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaleProcess(runelog) {
+		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
 		return nil
 	}
 
-	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaleProcess(runelog) {
-		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
+	if upArgs.accessToken != "" {
+
+	}
+
+	res, err := c.ServerClient.LoginMachine(c.MachinePubKey, c.Spec.WgPrivateKey)
+	if err != nil {
+		runelog.Logger.Warnf("failed to login, %s", err.Error())
 		return nil
 	}
 

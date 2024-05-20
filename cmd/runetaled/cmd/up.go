@@ -80,6 +80,12 @@ func execUp(ctx context.Context, args []string) error {
 		return err
 	}
 
+	res, err := conf.ServerClient.LoginMachine(conf.MachinePubKey, conf.Spec.WgPrivateKey)
+	if err != nil {
+		runelog.Logger.Warnf("failed to login, %s", err.Error())
+		return nil
+	}
+
 	ch := make(chan struct{})
 
 	r := rcn.NewRcn(conf, conf.MachinePubKey, ch, runelog)
@@ -97,7 +103,7 @@ func execUp(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	err = r.Setup()
+	err = r.Setup(res.Ip, res.Cidr)
 	if err != nil {
 		runelog.Logger.Debugf("failed to rcn setup, %s", err.Error())
 		return err

@@ -58,8 +58,8 @@ func NewRcn(
 
 // TODO(snt): also set up a grpc server to talk to cli?
 // call Setup function before Start
-func (r *Rcn) Setup() error {
-	err := r.createIface()
+func (r *Rcn) Setup(ip, cidr string) error {
+	err := r.createIface(ip, cidr)
 	if err != nil {
 		return err
 	}
@@ -82,17 +82,9 @@ func (r *Rcn) Start() {
 	r.runelog.Logger.Debugf("started rcn")
 }
 
-func (r *Rcn) createIface() error {
-	res, err := r.serverClient.LoginMachine(r.mk, r.conf.Spec.WgPrivateKey)
-	if err != nil {
-		return err
-	}
+func (r *Rcn) createIface(ip, cidr string) error {
 
-	if !res.IsRegistered {
-		r.runelog.Logger.Warnf("please login with `runetale login` and try again")
-	}
-
-	r.iface = iface.NewIface(r.conf.Spec.TunName, r.conf.Spec.WgPrivateKey, res.Ip, res.Cidr, r.runelog)
+	r.iface = iface.NewIface(r.conf.Spec.TunName, r.conf.Spec.WgPrivateKey, ip, cidr, r.runelog)
 	return iface.CreateIface(r.iface, r.runelog)
 }
 

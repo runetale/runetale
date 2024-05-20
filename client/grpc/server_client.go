@@ -22,6 +22,7 @@ import (
 
 type ServerClientImpl interface {
 	LoginMachine(mk, wgPrivKey string) (*login.LoginMachineResponse, error)
+	CreateMachine(token string) error
 	SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.SyncMachinesResponse, error)
 	ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error)
 	Connect(mk string) (*daemon.GetConnectionStatusResponse, error)
@@ -102,6 +103,10 @@ func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
 	}
 
 	return msg.Ip, msg.Cidr, nil
+}
+
+func (c *ServerClient) CreateMachine(token string) error {
+	return nil
 }
 
 func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error) {
