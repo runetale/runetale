@@ -26,14 +26,15 @@ import (
 )
 
 var upArgs struct {
-	clientPath string
-	serverHost string
-	serverPort int64
-	signalHost string
-	signalPort int64
-	logFile    string
-	logLevel   string
-	debug      bool
+	clientPath  string
+	accessToken string
+	serverHost  string
+	serverPort  int64
+	signalHost  string
+	signalPort  int64
+	logFile     string
+	logLevel    string
+	debug       bool
 }
 
 var upCmd = &ffcli.Command{
@@ -44,6 +45,7 @@ var upCmd = &ffcli.Command{
 		fs := flag.NewFlagSet("up", flag.ExitOnError)
 		fs.StringVar(&upArgs.clientPath, "path", paths.DefaultClientConfigFile(), "client default config file")
 		fs.StringVar(&upArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "server host")
+		fs.StringVar(&upArgs.accessToken, "access-token", "", "launch peer with access token")
 		fs.Int64Var(&upArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
 		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
@@ -79,18 +81,20 @@ func execUp(ctx context.Context, args []string) error {
 	)
 	if err != nil {
 		fmt.Printf("failed to create client conf, because %s\n", err.Error())
-		return nil
+		return err
 	}
 
-	res, err := c.ServerClient.LoginMachine(c.MachinePubKey, c.Spec.WgPrivateKey)
-	if err != nil {
-		runelog.Logger.Warnf("failed to login, %s", err.Error())
-		return nil
-	}
-
+	// todo: (snt)
+	// if does'nt activated runetaled, we have to re-activating runetale.
 	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaleProcess(runelog) {
 		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
 		return nil
+	}
+
+	ip, cidr, err := loginMachine(upArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	if err != nil {
+		fmt.Printf("failed to login %s\n", err.Error())
+		return err
 	}
 
 	err = upEngine(
@@ -99,8 +103,8 @@ func execUp(ctx context.Context, args []string) error {
 		runelog,
 		c.Spec.TunName,
 		c.MachinePubKey,
-		res.Ip,
-		res.Cidr,
+		ip,
+		cidr,
 		c.Spec.WgPrivateKey,
 		c.Spec.BlackList,
 	)
@@ -108,8 +112,6 @@ func execUp(ctx context.Context, args []string) error {
 		runelog.Logger.Warnf("failed to start engine. because %v", err)
 		return err
 	}
-
-	// TODO: (shinta) impl daemon process
 
 	stop := make(chan struct{})
 	go func() {
@@ -129,6 +131,22 @@ func execUp(ctx context.Context, args []string) error {
 	<-stop
 
 	return nil
+}
+
+func loginMachine(accessToken, mk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
+	if accessToken != "" {
+		res, err := client.CreateMachineWithAccessToken(accessToken, mk, wgPrivKey)
+		if err != nil {
+			return "", "", err
+		}
+		return res.GetIp(), res.GetCidr(), nil
+	}
+
+	res, err := client.LoginMachine(mk, wgPrivKey)
+	if err != nil {
+		return "", "", err
+	}
+	return res.GetIp(), res.GetCidr(), nil
 }
 
 func upEngine(

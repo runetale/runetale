@@ -4,6 +4,8 @@
 
 package system
 
+type RunetaleNodeType string
+
 type SysInfo struct {
 	GoOS      string
 	Kernel    string

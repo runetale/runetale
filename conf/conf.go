@@ -17,9 +17,12 @@ type Conf struct {
 	ServerClient  grpc_client.ServerClientImpl
 	Spec          *Spec
 	MachinePubKey string
-	runelog       *runelog.Runelog
 }
 
+// note: (snt)
+// NewConf creating Conf structure for file store and specs.
+// file store cached wg privatekey on peer.
+// specs cached signal and server hosts
 func NewConf(
 	clientCtx context.Context,
 	path string,

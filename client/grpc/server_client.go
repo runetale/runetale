@@ -22,6 +22,7 @@ import (
 
 type ServerClientImpl interface {
 	LoginMachine(mk, wgPrivKey string) (*login.LoginMachineResponse, error)
+	CreateMachineWithAccessToken(token, mk, wgPrivKey string) (*machine.CreateMachineResponse, error)
 	SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.SyncMachinesResponse, error)
 	ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error)
 	Connect(mk string) (*daemon.GetConnectionStatusResponse, error)
@@ -91,12 +92,34 @@ func (c *ServerClient) LoginMachine(mk, wgPrivKey string) (*login.LoginMachineRe
 }
 
 func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
-	fmt.Printf("please login via this link => %s\n", url)
+	err := utils.OpenBrowser(url)
+	if err != nil {
+		return "", "", err
+	}
+
 	msg, err := c.ConnectStreamPeerLoginSession(mk)
 	if err != nil {
 		return "", "", err
 	}
+
 	return msg.Ip, msg.Cidr, nil
+}
+
+func (c *ServerClient) CreateMachineWithAccessToken(token, mk, wgPrivKey string) (*machine.CreateMachineResponse, error) {
+	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
+	if err != nil {
+		return nil, err
+	}
+
+	md := metadata.New(map[string]string{utils.AccessToken: token, utils.MachineKey: mk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	ctx := metadata.NewOutgoingContext(c.ctx, md)
+
+	res, err := c.machineClient.CreateMachineWithAccessToken(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error) {
