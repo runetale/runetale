@@ -81,7 +81,7 @@ func execUp(ctx context.Context, args []string) error {
 	)
 	if err != nil {
 		fmt.Printf("failed to create client conf, because %s\n", err.Error())
-		return nil
+		return err
 	}
 
 	// todo: (snt)
@@ -91,14 +91,10 @@ func execUp(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	if upArgs.accessToken != "" {
-
-	}
-
-	res, err := c.ServerClient.LoginMachine(c.MachinePubKey, c.Spec.WgPrivateKey)
+	ip, cidr, err := loginMachine(upArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
-		runelog.Logger.Warnf("failed to login, %s", err.Error())
-		return nil
+		fmt.Printf("failed to login %s\n", err.Error())
+		return err
 	}
 
 	err = upEngine(
@@ -107,8 +103,8 @@ func execUp(ctx context.Context, args []string) error {
 		runelog,
 		c.Spec.TunName,
 		c.MachinePubKey,
-		res.Ip,
-		res.Cidr,
+		ip,
+		cidr,
 		c.Spec.WgPrivateKey,
 		c.Spec.BlackList,
 	)
@@ -116,8 +112,6 @@ func execUp(ctx context.Context, args []string) error {
 		runelog.Logger.Warnf("failed to start engine. because %v", err)
 		return err
 	}
-
-	// TODO: (shinta) impl daemon process
 
 	stop := make(chan struct{})
 	go func() {
@@ -137,6 +131,22 @@ func execUp(ctx context.Context, args []string) error {
 	<-stop
 
 	return nil
+}
+
+func loginMachine(accessToken, mk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
+	if accessToken != "" {
+		res, err := client.CreateMachineWithAccessToken(accessToken, mk, wgPrivKey)
+		if err != nil {
+			return "", "", err
+		}
+		return res.GetIp(), res.GetCidr(), nil
+	}
+
+	res, err := client.LoginMachine(mk, wgPrivKey)
+	if err != nil {
+		return "", "", err
+	}
+	return res.GetIp(), res.GetCidr(), nil
 }
 
 func upEngine(

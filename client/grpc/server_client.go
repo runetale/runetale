@@ -22,7 +22,7 @@ import (
 
 type ServerClientImpl interface {
 	LoginMachine(mk, wgPrivKey string) (*login.LoginMachineResponse, error)
-	CreateMachine(token string) error
+	CreateMachineWithAccessToken(token, mk, wgPrivKey string) (*machine.CreateMachineResponse, error)
 	SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.SyncMachinesResponse, error)
 	ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error)
 	Connect(mk string) (*daemon.GetConnectionStatusResponse, error)
@@ -105,8 +105,21 @@ func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
 	return msg.Ip, msg.Cidr, nil
 }
 
-func (c *ServerClient) CreateMachine(token string) error {
-	return nil
+func (c *ServerClient) CreateMachineWithAccessToken(token, mk, wgPrivKey string) (*machine.CreateMachineResponse, error) {
+	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
+	if err != nil {
+		return nil, err
+	}
+
+	md := metadata.New(map[string]string{utils.AccessToken: token, utils.MachineKey: mk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	ctx := metadata.NewOutgoingContext(c.ctx, md)
+
+	res, err := c.machineClient.CreateMachineWithAccessToken(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error) {
