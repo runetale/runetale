@@ -1,9 +1,12 @@
 {
   description = "runetale";
 
-  inputs.nixpkgs.url = "nixpkgs/nixos-21.11";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, flake-utils }:
     let
 
       # Generate a user-friendly version number.
@@ -65,9 +68,8 @@
           in pkgs.mkShell {
             buildInputs = with pkgs; [
               protoc-gen-go
-              go_1_17
-              goimports
               gopls
+              go_1_22
               protobuf
               protoc-gen-go-grpc
               docker-compose
