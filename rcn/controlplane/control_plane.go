@@ -181,32 +181,35 @@ func (c *ControlPlane) ConnectSignalServer() {
 
 	c.signalClient.WaitStartConnect()
 
-	_, err := c.initialOfferForRemotePeer()
+	err := c.initialOfferForRemotePeer()
 	if err != nil {
 		close(c.ch)
 		return
 	}
 }
 
-func (c *ControlPlane) initialOfferForRemotePeer() (*webrtc.Ice, error) {
+func (c *ControlPlane) initialOfferForRemotePeer() error {
 	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
 	if err != nil {
-		return nil, err
+		return err
+	}
+
+	// for the first peer
+	if res.GetRemotePeers() == nil {
+		return nil
 	}
 
 	for _, rp := range res.GetRemotePeers() {
 		i, err := c.newIce(rp, res.Ip, res.Cidr)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		c.peerConns[rp.RemoteClientMachineKey] = i
 		c.waitForRemoteConnCh <- i
-		return c.peerConns[rp.RemoteClientMachineKey], nil
 	}
 
-	// (shinta) is it inherently impossible?
-	return nil, errors.New("failed to initial offer")
+	return errors.New("unexpected initiali offer error")
 }
 
 // keep the latest state of Peers received from the server

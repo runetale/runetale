@@ -84,9 +84,7 @@ func execUp(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// todo: (snt)
-	// if does'nt activated runetaled, we have to re-activating runetale.
-	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaleProcess(runelog) {
+	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaledProcess(runelog) {
 		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
 		return nil
 	}
@@ -194,7 +192,7 @@ func isInstallRunetaledDaemon(runelog *runelog.Runelog) bool {
 	return isInstalled
 }
 
-func isRunningRunetaleProcess(runelog *runelog.Runelog) bool {
+func isRunningRunetaledProcess(runelog *runelog.Runelog) bool {
 	p := process.NewProcess(runelog)
 	return p.GetRunetaledProcess()
 }
