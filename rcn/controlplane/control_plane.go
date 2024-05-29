@@ -10,13 +10,13 @@ package controlplane
 //
 
 import (
-	"errors"
 	"strings"
 	"sync"
 
 	"github.com/pion/ice/v2"
 	"github.com/runetale/client-go/runetale/runetale/v1/machine"
 	"github.com/runetale/client-go/runetale/runetale/v1/negotiation"
+	"github.com/runetale/runetale/backoff"
 	"github.com/runetale/runetale/client/grpc"
 	"github.com/runetale/runetale/conf"
 	"github.com/runetale/runetale/rcn/rcnsock"
@@ -154,7 +154,8 @@ func (c *ControlPlane) receiveSignalRequest(
 }
 
 func (c *ControlPlane) ConnectSignalServer() {
-	go func() {
+	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
+	operation := func() error {
 		err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
 			c.mu.Lock()
 			defer c.mu.Unlock()
@@ -167,6 +168,7 @@ func (c *ControlPlane) ConnectSignalServer() {
 				res.GetPwd(),
 				res.GetCandidate(),
 			)
+
 			if err != nil {
 				return err
 			}
@@ -174,10 +176,16 @@ func (c *ControlPlane) ConnectSignalServer() {
 			return nil
 		})
 		if err != nil {
-			close(c.ch)
-			return
+			return err
 		}
-	}()
+
+		return nil
+	}
+
+	if err := backoff.Retry(operation, b); err != nil {
+		close(c.ch)
+		return
+	}
 
 	c.signalClient.WaitStartConnect()
 
@@ -189,27 +197,35 @@ func (c *ControlPlane) ConnectSignalServer() {
 }
 
 func (c *ControlPlane) initialOfferForRemotePeer() error {
-	res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
-	if err != nil {
-		return err
-	}
-
-	// for the first peer
-	if res.GetRemotePeers() == nil {
-		return nil
-	}
-
-	for _, rp := range res.GetRemotePeers() {
-		i, err := c.newIce(rp, res.Ip, res.Cidr)
+	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
+	operation := func() error {
+		res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
 		if err != nil {
 			return err
 		}
 
-		c.peerConns[rp.RemoteClientMachineKey] = i
-		c.waitForRemoteConnCh <- i
+		// for the first peer
+		if res.GetRemotePeers() == nil {
+			return nil
+		}
+
+		for _, rp := range res.GetRemotePeers() {
+			i, err := c.newIce(rp, res.Ip, res.Cidr)
+			if err != nil {
+				return err
+			}
+
+			c.peerConns[rp.RemoteClientMachineKey] = i
+			c.waitForRemoteConnCh <- i
+		}
+
+		return nil
 	}
 
-	return errors.New("unexpected initiali offer error")
+	if err := backoff.Retry(operation, b); err != nil {
+		return err
+	}
+	return nil
 }
 
 // keep the latest state of Peers received from the server

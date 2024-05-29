@@ -2,7 +2,7 @@
 // the backoff process is available at 'https://github.com/cenkalti/backoff' for reference.
 // not enough processing to include in the package, so it's lightweight.
 
-package utils
+package backoff
 
 import (
 	"context"

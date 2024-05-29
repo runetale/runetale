@@ -4,9 +4,6 @@
 
 package conn
 
-// runetale connection status
-// signaling/client/service/negotiation.goの代わり
-
 import "sync"
 
 type ConnStatus string
