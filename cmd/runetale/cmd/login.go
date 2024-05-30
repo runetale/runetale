@@ -71,12 +71,6 @@ func execLogin(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	_, err = c.ServerClient.LoginMachine(c.MachinePubKey, c.Spec.WgPrivateKey)
-	if err != nil {
-		runelog.Logger.Warnf("failed to login, %s", err.Error())
-		return nil
-	}
-
 	ip, cidr, err := loginMachine(loginArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
