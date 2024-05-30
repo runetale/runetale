@@ -6,7 +6,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/runetale/client-go/runetale/runetale/v1/daemon"
 	"github.com/runetale/client-go/runetale/runetale/v1/login"
@@ -85,8 +84,7 @@ func (c *ServerClient) LoginMachine(mk, wgPrivKey string) (*login.LoginMachineRe
 		cidr = res.Cidr
 	}
 
-	fmt.Printf("runetale ip => [%s/%s]\n", ip, cidr)
-	fmt.Printf("Successful login\n")
+	c.runelog.Logger.Infof("runetale ip => [%s/%s]\n", ip, cidr)
 
 	return res, nil
 }

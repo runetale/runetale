@@ -50,7 +50,8 @@ func (w *WonderWall) dialRunetaleStatus() error {
 func (w *WonderWall) Start() {
 	err := w.dialRunetaleStatus()
 	if err != nil {
-		w.runelog.Logger.Errorf("failed to dial rcn sock %s", err.Error())
+		w.runelog.Logger.Debugf("failed to dial rcn sock %s", err.Error())
+		fmt.Println("please retry runetaled up")
 	}
 }
 

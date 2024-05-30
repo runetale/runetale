@@ -117,10 +117,10 @@ func (s *RcnSock) Connect(
 
 func (s *RcnSock) DialRunetaleStatus() (*DialRunetaleStatus, error) {
 	conn, err := net.Dial("unix", sockaddr)
-	defer conn.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Close()
 
 	decoder := gob.NewDecoder(conn)
 	encoder := gob.NewEncoder(conn)

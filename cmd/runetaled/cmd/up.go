@@ -47,7 +47,7 @@ var upCmd = &ffcli.Command{
 		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signaling server host url")
 		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signaling server host port")
 		fs.StringVar(&upArgs.logFile, "logfile", paths.DefaultRunetaledLogFile(), "set logfile path")
-		fs.StringVar(&upArgs.logLevel, "loglevel", runelog.InfoLevelStr, "set log level")
+		fs.StringVar(&upArgs.logLevel, "loglevel", runelog.DebugLevelStr, "set log level")
 		fs.BoolVar(&upArgs.debug, "debug", false, "for debug")
 		fs.BoolVar(&upArgs.daemon, "daemon", true, "whether to install daemon")
 		return fs
@@ -55,6 +55,7 @@ var upCmd = &ffcli.Command{
 	Exec: execUp,
 }
 
+// t_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDgzNDkzNTk5NDg0ODU5MTQzMzUiLCJkZXBsb3ltZW50X21ldGhvZCI6IkRPQ0tFUiIsIm5hbWUiOiJ0ZXN0IiwiZGVzYyI6InRlc3QiLCJwb3J0Ijo4MCwiZXhwIjoxNzE5NTQzMjE0LCJqdGkiOiJiNjlkMjk1Yy0wZmQ4LTRjMmQtYmZiNC02OWQ5NWZjYjc1YmQiLCJpYXQiOjE3MTY5NTEyMTQsImlzcyI6InJ1bmV0YWxlIn0.gtzJdihNEEgraBCxE0mYUFfUVx1q2erS9kKR_nKpSBY
 func execUp(ctx context.Context, args []string) error {
 	runelog, err := runelog.NewRunelog("runetaled up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
 	if err != nil {
