@@ -84,8 +84,8 @@ func execUp(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaledProcess(runelog) {
-		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
+	if !isInstallRunetaledDaemon(runelog) && !isRunningRunetaledProcess(runelog) {
+		runelog.Logger.Warnf("you need to activate runetaled. execute this command 'runetaled up'")
 		return nil
 	}
 
