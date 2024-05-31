@@ -367,3 +367,13 @@ func (c *ControlPlane) Close() error {
 
 	return nil
 }
+
+func (c *ControlPlane) ConnectSock(ip, cidr string) {
+	go func() {
+		err := c.sock.Connect(c.signalClient, ip, cidr)
+		if err != nil {
+			c.runelog.Logger.Errorf("failed connect rcn sock, %s", err.Error())
+		}
+		c.runelog.Logger.Debugf("rcn sock connect has been disconnected")
+	}()
+}

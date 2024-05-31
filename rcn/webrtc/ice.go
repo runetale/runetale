@@ -344,8 +344,6 @@ func (i *Ice) startConn(uname, pwd string) error {
 		return err
 	}
 
-	i.ConnectSock()
-
 	return nil
 }
 
@@ -418,18 +416,7 @@ func (i *Ice) waitingRemotePeerConnections() error {
 		if err != nil {
 			return err
 		}
-		return nil
 	}
-}
-
-func (i *Ice) ConnectSock() {
-	go func() {
-		err := i.sock.Connect(i.signalClient, i.ip, i.cidr)
-		if err != nil {
-			i.runelog.Logger.Errorf("failed connect rcn sock, %s", err.Error())
-		}
-		i.runelog.Logger.Debugf("rcn sock connect has been disconnected")
-	}()
 }
 
 func (i *Ice) signalAnswer() error {

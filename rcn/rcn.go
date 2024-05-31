@@ -36,6 +36,7 @@ func NewRcn(
 	ch chan struct{},
 	runelog *runelog.Runelog,
 ) *Rcn {
+
 	cp := controlplane.NewControlPlane(
 		conf.SignalClient,
 		conf.ServerClient,
@@ -77,11 +78,12 @@ func (r *Rcn) Start() {
 
 	go r.cp.ConnectSignalServer()
 
+	go r.cp.ConnectSock(r.iface.IP, r.iface.CIDR)
+
 	r.runelog.Logger.Debugf("started rcn")
 }
 
 func (r *Rcn) createIface(ip, cidr string) error {
-
 	r.iface = iface.NewIface(r.conf.Spec.TunName, r.conf.Spec.WgPrivateKey, ip, cidr, r.runelog)
 	return iface.CreateIface(r.iface, r.runelog)
 }

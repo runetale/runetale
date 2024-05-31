@@ -38,7 +38,7 @@ type engine struct {
 	rootch chan struct{}
 }
 
-func Newengine(
+func NewEngine(
 	serverClient grpc.ServerClientImpl,
 	runelog *runelog.Runelog,
 	tunName string,

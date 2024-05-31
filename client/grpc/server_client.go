@@ -21,7 +21,7 @@ import (
 
 type ServerClientImpl interface {
 	LoginMachine(mk, wgPrivKey string) (*login.LoginMachineResponse, error)
-	CreateMachineWithAccessToken(token, mk, wgPrivKey string) (*machine.CreateMachineResponse, error)
+	ComposeMachine(token, mk, wgPrivKey string) (*machine.ComposeMachineResponse, error)
 	SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.SyncMachinesResponse, error)
 	ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error)
 	Connect(mk string) (*daemon.GetConnectionStatusResponse, error)
@@ -103,7 +103,7 @@ func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
 	return msg.Ip, msg.Cidr, nil
 }
 
-func (c *ServerClient) CreateMachineWithAccessToken(token, mk, wgPrivKey string) (*machine.CreateMachineResponse, error) {
+func (c *ServerClient) ComposeMachine(token, mk, wgPrivKey string) (*machine.ComposeMachineResponse, error) {
 	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (c *ServerClient) CreateMachineWithAccessToken(token, mk, wgPrivKey string)
 	md := metadata.New(map[string]string{utils.AccessToken: token, utils.MachineKey: mk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
-	res, err := c.machineClient.CreateMachineWithAccessToken(ctx, &emptypb.Empty{})
+	res, err := c.machineClient.ComposeMachine(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}

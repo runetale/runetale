@@ -36,13 +36,13 @@ func NewWonderWall(
 }
 
 func (w *WonderWall) dialRunetaleStatus() error {
-	ds, err := w.sock.DialRunetaleStatus()
+	ds, err := w.sock.DialRunetaledStatus()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("runetale connect to server status => [%s]\n", ds.Status)
-	fmt.Printf("runetale ip => [%s/%s]", ds.Ip, ds.Cidr)
+	w.runelog.Logger.Debugf("runetale connect to signal server status => [%s]", ds.ConnStatus)
+	w.runelog.Logger.Debugf("runetale ip => [%s/%s]", ds.Ip, ds.Cidr)
 
 	return nil
 }

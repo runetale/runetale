@@ -67,7 +67,7 @@ func (s *RcnSock) listen(conn net.Conn) {
 			status := s.signalClient.GetConnStatus()
 			mes.DialRunetaleStatus.Ip = s.ip
 			mes.DialRunetaleStatus.Cidr = s.cidr
-			mes.DialRunetaleStatus.Status = status
+			mes.DialRunetaleStatus.ConnStatus = status
 		}
 
 		err = encoder.Encode(mes)
@@ -115,7 +115,7 @@ func (s *RcnSock) Connect(
 	}
 }
 
-func (s *RcnSock) DialRunetaleStatus() (*DialRunetaleStatus, error) {
+func (s *RcnSock) DialRunetaledStatus() (*DialRunetaleStatus, error) {
 	conn, err := net.Dial("unix", sockaddr)
 	if err != nil {
 		return nil, err

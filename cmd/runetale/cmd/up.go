@@ -50,7 +50,7 @@ var upCmd = &ffcli.Command{
 		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
 		fs.StringVar(&upArgs.logFile, "logfile", paths.DefaultClientLogFile(), "set logfile path")
-		fs.StringVar(&upArgs.logLevel, "loglevel", runelog.InfoLevelStr, "set log level")
+		fs.StringVar(&upArgs.logLevel, "loglevel", runelog.DebugLevelStr, "set log level")
 		fs.BoolVar(&upArgs.debug, "debug", false, "is debug")
 		return fs
 	})(),
@@ -133,7 +133,7 @@ func execUp(ctx context.Context, args []string) error {
 
 func loginMachine(accessToken, mk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
 	if accessToken != "" {
-		res, err := client.CreateMachineWithAccessToken(accessToken, mk, wgPrivKey)
+		res, err := client.ComposeMachine(accessToken, mk, wgPrivKey)
 		if err != nil {
 			return "", "", err
 		}
@@ -160,7 +160,7 @@ func upEngine(
 ) error {
 	pctx, cancel := context.WithCancel(ctx)
 
-	engine, err := engine.Newengine(
+	engine, err := engine.NewEngine(
 		serverClient,
 		runelog,
 		tunName,
