@@ -154,49 +154,51 @@ func (c *ControlPlane) receiveSignalRequest(
 }
 
 func (c *ControlPlane) ConnectSignalServer() {
-	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
-	operation := func() error {
-		err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
-			c.mu.Lock()
-			defer c.mu.Unlock()
+	go func() {
+		b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
+		operation := func() error {
+			err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
+				c.mu.Lock()
+				defer c.mu.Unlock()
 
-			err := c.receiveSignalRequest(
-				res.GetDstPeerMachineKey(),
-				res.GetType(),
-				c.peerConns[res.GetDstPeerMachineKey()],
-				res.GetUFlag(),
-				res.GetPwd(),
-				res.GetCandidate(),
-			)
+				err := c.receiveSignalRequest(
+					res.GetDstPeerMachineKey(),
+					res.GetType(),
+					c.peerConns[res.GetDstPeerMachineKey()],
+					res.GetUFlag(),
+					res.GetPwd(),
+					res.GetCandidate(),
+				)
 
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
 			if err != nil {
 				return err
 			}
 
 			return nil
-		})
-		if err != nil {
-			return err
 		}
 
-		return nil
-	}
-
-	if err := backoff.Retry(operation, b); err != nil {
-		close(c.ch)
-		return
-	}
+		if err := backoff.Retry(operation, b); err != nil {
+			close(c.ch)
+			return
+		}
+	}()
 
 	c.signalClient.WaitStartConnect()
 
-	err := c.initialOfferForRemotePeer()
+	err := c.initialOfferToRemotePeer()
 	if err != nil {
 		close(c.ch)
 		return
 	}
 }
 
-func (c *ControlPlane) initialOfferForRemotePeer() error {
+func (c *ControlPlane) initialOfferToRemotePeer() error {
 	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
 	operation := func() error {
 		res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
@@ -204,7 +206,6 @@ func (c *ControlPlane) initialOfferForRemotePeer() error {
 			return err
 		}
 
-		// for the first peer
 		if res.GetRemotePeers() == nil {
 			return nil
 		}

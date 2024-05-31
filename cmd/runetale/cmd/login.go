@@ -77,7 +77,7 @@ func execLogin(ctx context.Context, args []string) error {
 		return err
 	}
 
-	runelog.Logger.Infof("runetale ip => [%s/%s]\n", ip, cidr)
+	runelog.Logger.Infof("runetale ip => [%s/%s]", ip, cidr)
 
 	return nil
 }

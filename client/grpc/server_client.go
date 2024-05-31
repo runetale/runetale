@@ -84,7 +84,7 @@ func (c *ServerClient) LoginMachine(mk, wgPrivKey string) (*login.LoginMachineRe
 		cidr = res.Cidr
 	}
 
-	c.runelog.Logger.Infof("runetale ip => [%s/%s]\n", ip, cidr)
+	c.runelog.Logger.Infof("runetale ip => [%s/%s]", ip, cidr)
 
 	return res, nil
 }

@@ -42,7 +42,7 @@ func (w *WonderWall) dialRunetaleStatus() error {
 	}
 
 	fmt.Printf("runetale connect to server status => [%s]\n", ds.Status)
-	fmt.Printf("runetale ip => [%s/%s]\n", ds.Ip, ds.Cidr)
+	fmt.Printf("runetale ip => [%s/%s]", ds.Ip, ds.Cidr)
 
 	return nil
 }
