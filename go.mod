@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/peterbourgon/ff/v2 v2.0.1
-	github.com/runetale/client-go v0.0.0-20240531114441-ea836ea17ac5
+	github.com/runetale/client-go v0.0.0-20240531140047-535f169ad7f9
 	go.uber.org/zap v1.21.0
 	go4.org/mem v0.0.0-20210711025021-927187094b94
 	golang.org/x/net v0.18.0
