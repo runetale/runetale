@@ -101,6 +101,8 @@ github.com/runetale/client-go v0.0.0-20240531114441-ea836ea17ac5 h1:xN1KYRQy6asv
 github.com/runetale/client-go v0.0.0-20240531114441-ea836ea17ac5/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
 github.com/runetale/client-go v0.0.0-20240531140047-535f169ad7f9 h1:BRY7FGUHrNqcfSn0/AnFN5mofgTvLf8WRiI36x+akBg=
 github.com/runetale/client-go v0.0.0-20240531140047-535f169ad7f9/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
+github.com/runetale/client-go v0.0.0-20240531140932-5df195347f57 h1:tFqCYZysWYBDoiwruysA0RrUNLQnJ77DTRX+isBL1tU=
+github.com/runetale/client-go v0.0.0-20240531140932-5df195347f57/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
