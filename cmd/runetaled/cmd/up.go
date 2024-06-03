@@ -81,7 +81,7 @@ func execUp(ctx context.Context, args []string) error {
 		return err
 	}
 
-	res, err := conf.ServerClient.LoginNode(conf.MachinePubKey, conf.Spec.WgPrivateKey)
+	res, err := conf.ServerClient.LoginNode(conf.NodePubKey, conf.Spec.WgPrivateKey)
 	if err != nil {
 		runelog.Logger.Warnf("failed to login, %s", err.Error())
 		return nil
@@ -89,7 +89,7 @@ func execUp(ctx context.Context, args []string) error {
 
 	ch := make(chan struct{})
 
-	r := rcn.NewRcn(conf, conf.MachinePubKey, ch, runelog)
+	r := rcn.NewRcn(conf, conf.NodePubKey, ch, runelog)
 
 	if upArgs.daemon {
 		d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, runelog)

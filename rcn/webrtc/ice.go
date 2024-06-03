@@ -5,7 +5,7 @@
 package webrtc
 
 // ice and provides webrtc functionalit
-// ice initializes one structure per remote machine key
+// ice initializes one structure per remote Node key
 //
 
 import (
@@ -36,7 +36,7 @@ type Ice struct {
 
 	wireproxy *proxy.WireProxy
 
-	// channel to use when making a peer connection
+	// channel to use when making a node connection
 	remoteOfferCh     chan Credentials
 	remoteAnswerCh    chan Credentials
 	remoteCandidateCh chan Credentials
@@ -49,10 +49,9 @@ type Ice struct {
 
 	stunTurn *StunTurnConfig
 
-	// remote
-	remoteWgPubKey   string
-	remoteIp         string
-	remoteMachineKey string
+	remoteWgPubKey string
+	remoteIp       string
+	remoteNodeKey  string
 
 	// local
 	wgPubKey     string
@@ -65,7 +64,7 @@ type Ice struct {
 	ip   string
 	cidr string
 
-	mk string
+	nk string
 
 	blackList []string
 
@@ -84,7 +83,7 @@ func NewIce(
 
 	remoteWgPubKey string,
 	remoteip string,
-	remoteMachineKey string,
+	remoteNodeKey string,
 
 	ip string,
 	cidr string,
@@ -92,7 +91,7 @@ func NewIce(
 	wgPort int,
 	wgIface string,
 	presharedKey string,
-	mk string,
+	nk string,
 
 	stunTurn *StunTurnConfig,
 	blacklist []string,
@@ -113,9 +112,9 @@ func NewIce(
 
 		stunTurn: stunTurn,
 
-		remoteWgPubKey:   remoteWgPubKey,
-		remoteIp:         remoteip,
-		remoteMachineKey: remoteMachineKey,
+		remoteWgPubKey: remoteWgPubKey,
+		remoteIp:       remoteip,
+		remoteNodeKey:  remoteNodeKey,
 
 		wgPubKey:     wgPrivateKey.PublicKey().String(),
 		wgPrivKey:    wgPrivateKey,
@@ -124,7 +123,7 @@ func NewIce(
 		preSharedKey: presharedKey,
 		ip:           ip,
 		cidr:         cidr,
-		mk:           mk,
+		nk:           nk,
 
 		blackList: blacklist,
 
@@ -144,7 +143,7 @@ func (i *Ice) Setup() (err error) {
 
 	// configure sigexe
 	//
-	i.sigexec = NewSigExecuter(i.signalClient, i.remoteMachineKey, i.mk, i.runelog)
+	i.sigexec = NewSigExecuter(i.signalClient, i.remoteNodeKey, i.nk, i.runelog)
 
 	// configure ice agent
 	i.udpMuxConn, err = net.ListenUDP("udp4", &net.UDPAddr{Port: 0})
@@ -240,12 +239,12 @@ func (i *Ice) IceSelectedHasCandidatePairChanged(local ice.Candidate, remote ice
 	i.runelog.Logger.Infof("[CANDIDATE COMPLETED] agent candidates were found, local:[%s] <-> remote:[%s]", local.Address(), remote.Address())
 }
 
-func (i *Ice) GetRemoteMachineKey() string {
-	return i.remoteMachineKey
+func (i *Ice) GetRemoteNodeKey() string {
+	return i.remoteNodeKey
 }
 
-func (i *Ice) GetLocalMachineKey() string {
-	return i.mk
+func (i *Ice) GetLocalNodeKey() string {
+	return i.nk
 }
 
 func (i *Ice) getBlackListWithInterfaceFilter() func(string) bool {
@@ -313,7 +312,7 @@ func (i *Ice) getLocalUserIceAgentCredentials() (string, string, error) {
 	return uname, pwd, nil
 }
 
-// asynchronously waits for a signal process from another peer before sending an offer
+// asynchronously waits for a signal process from another node before sending an offer
 func (i *Ice) StartGatheringProcess() error {
 	// must be done asynchronously, separately from SignalOffer,
 	// as it requires waiting for a connection channel from the other peers
@@ -390,9 +389,9 @@ func (i *Ice) waitingRemotePeerConnections() error {
 	for {
 		select {
 		case credentials = <-i.remoteAnswerCh:
-			i.runelog.Logger.Infof("receive credentials from [%s]", i.remoteMachineKey)
+			i.runelog.Logger.Infof("receive credentials from [%s]", i.remoteNodeKey)
 		case credentials = <-i.remoteOfferCh:
-			i.runelog.Logger.Infof("receive offer from [%s]", i.remoteMachineKey)
+			i.runelog.Logger.Infof("receive offer from [%s]", i.remoteNodeKey)
 			err := i.signalAnswer()
 			if err != nil {
 				i.runelog.Logger.Errorf("failed to signal offer, %s", err.Error())
@@ -412,7 +411,7 @@ func (i *Ice) waitingRemotePeerConnections() error {
 			return err
 		}
 
-		_, err = i.serverClient.Connect(i.mk)
+		_, err = i.serverClient.Connect(i.nk)
 		if err != nil {
 			return err
 		}
@@ -433,7 +432,7 @@ func (i *Ice) signalAnswer() error {
 		return err
 	}
 
-	i.runelog.Logger.Infof(fmt.Sprintf("send answer to [%s]", i.remoteMachineKey))
+	i.runelog.Logger.Infof(fmt.Sprintf("send answer to [%s]", i.remoteNodeKey))
 
 	return nil
 }
@@ -467,7 +466,7 @@ func (i *Ice) SendRemoteOfferCh(remotemk, uname, pwd string) {
 func (i *Ice) SendRemoteAnswerCh(remotemk, uname, pwd string) {
 	select {
 	case i.remoteAnswerCh <- *NewCredentials(uname, pwd):
-		i.runelog.Logger.Infof("send answer to [%s]", i.remoteMachineKey)
+		i.runelog.Logger.Infof("send answer to [%s]", i.remoteNodeKey)
 	default:
 		i.runelog.Logger.Infof("answer skipping message to %s", remotemk)
 	}
@@ -489,6 +488,6 @@ func (i *Ice) SendRemoteCandidate(candidate ice.Candidate) {
 			return
 		}
 
-		i.runelog.Logger.Infof("send candidate to [%s]", i.remoteMachineKey)
+		i.runelog.Logger.Infof("send candidate to [%s]", i.remoteNodeKey)
 	}()
 }

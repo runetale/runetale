@@ -75,7 +75,7 @@ func execDown(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	r := rcn.NewRcn(conf, conf.MachinePubKey, nil, runelog)
+	r := rcn.NewRcn(conf, conf.NodePubKey, nil, runelog)
 
 	err = r.Stop()
 	if err != nil {

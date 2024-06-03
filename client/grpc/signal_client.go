@@ -27,7 +27,7 @@ type SignalClientImpl interface {
 	Candidate(dstnk, srcnk string, candidate ice.Candidate) error
 	Offer(dstnk, srcnk string, uFlag string, pwd string) error
 	Answer(dstnk, srcnk string, uFlag string, pwd string) error
-	Connect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error
+	Connect(nk string, handler func(msg *negotiation.NegotiationRequest) error) error
 
 	WaitStartConnect()
 	IsReady() bool
@@ -132,8 +132,8 @@ func (c *SignalClient) Answer(
 	return nil
 }
 
-func (c *SignalClient) Connect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error {
-	md := metadata.New(map[string]string{utils.NodeKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+func (c *SignalClient) Connect(nk string, handler func(msg *negotiation.NegotiationRequest) error) error {
+	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	stream, err := c.negClient.Connect(ctx, grpc.WaitForReady(true))
@@ -155,17 +155,17 @@ func (c *SignalClient) Connect(mk string, handler func(msg *negotiation.Negotiat
 	for {
 		msg, err := stream.Recv()
 		if err == io.EOF {
-			c.runelog.Logger.Errorf("connect stream return to EOF, received by [%s]", mk)
+			c.runelog.Logger.Errorf("connect stream return to EOF, received by [%s]", nk)
 			return err
 		}
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to get grpc client stream for machine key: %s", msg.DstNodeKey)
+			c.runelog.Logger.Errorf("failed to get grpc client stream for node key: %s", msg.DstNodeKey)
 			return err
 		}
 
 		err = handler(msg)
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to handle grpc client stream stream in machine key: %s", msg.DstNodeKey)
+			c.runelog.Logger.Errorf("failed to handle grpc client stream stream in node key: %s", msg.DstNodeKey)
 			return err
 		}
 	}

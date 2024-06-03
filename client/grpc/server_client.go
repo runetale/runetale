@@ -20,13 +20,13 @@ import (
 )
 
 type ServerClientImpl interface {
-	LoginNode(mk, wgPrivKey string) (*login.LoginNodeResponse, error)
-	ComposeNode(token, mk, wgPrivKey string) (*node.ComposeNodeResponse, error)
-	SyncRemoteNodesConfig(mk, wgPrivKey string) (*node.SyncNodesResponse, error)
-	ConnectLoginSession(mk string) (*login.LoginSessionResponse, error)
-	Connect(mk string) (*daemon.GetConnectionStatusResponse, error)
-	Disconnect(mk string) (*daemon.GetConnectionStatusResponse, error)
-	GetConnectionStatus(mk string) (*daemon.GetConnectionStatusResponse, error)
+	LoginNode(nk, wgPrivKey string) (*login.LoginNodeResponse, error)
+	ComposeNode(token, nk, wgPrivKey string) (*node.ComposeNodeResponse, error)
+	SyncRemoteNodesConfig(nk, wgPrivKey string) (*node.SyncNodesResponse, error)
+	ConnectLoginSession(nk string) (*login.LoginSessionResponse, error)
+	Connect(nk string) (*daemon.GetConnectionStatusResponse, error)
+	Disconnect(nk string) (*daemon.GetConnectionStatusResponse, error)
+	GetConnectionStatus(nk string) (*daemon.GetConnectionStatusResponse, error)
 }
 
 type ServerClient struct {
@@ -55,7 +55,7 @@ func NewServerClient(
 	}
 }
 
-func (c *ServerClient) LoginNode(mk, wgPrivKey string) (*login.LoginNodeResponse, error) {
+func (c *ServerClient) LoginNode(nk, wgPrivKey string) (*login.LoginNodeResponse, error) {
 	var (
 		ip   string
 		cidr string
@@ -66,7 +66,7 @@ func (c *ServerClient) LoginNode(mk, wgPrivKey string) (*login.LoginNodeResponse
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.NodeKey: mk, utils.WgPubKey: parsedKey.PublicKey().String()})
+	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String()})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	res, err := c.loginClient.LoginNode(ctx, &emptypb.Empty{})
@@ -75,7 +75,7 @@ func (c *ServerClient) LoginNode(mk, wgPrivKey string) (*login.LoginNodeResponse
 	}
 
 	if !res.IsRegistered {
-		ip, cidr, err = c.loginBySession(mk, res.LoginUrl)
+		ip, cidr, err = c.loginBySession(nk, res.LoginUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -89,13 +89,13 @@ func (c *ServerClient) LoginNode(mk, wgPrivKey string) (*login.LoginNodeResponse
 	return res, nil
 }
 
-func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
+func (c *ServerClient) loginBySession(nk, url string) (string, string, error) {
 	err := utils.OpenBrowser(url)
 	if err != nil {
 		return "", "", err
 	}
 
-	msg, err := c.ConnectLoginSession(mk)
+	msg, err := c.ConnectLoginSession(nk)
 	if err != nil {
 		return "", "", err
 	}
@@ -103,13 +103,13 @@ func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
 	return msg.Ip, msg.Cidr, nil
 }
 
-func (c *ServerClient) ComposeNode(token, mk, wgPrivKey string) (*node.ComposeNodeResponse, error) {
+func (c *ServerClient) ComposeNode(token, nk, wgPrivKey string) (*node.ComposeNodeResponse, error) {
 	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
 	if err != nil {
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.AccessToken: token, utils.NodeKey: mk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	md := metadata.New(map[string]string{utils.AccessToken: token, utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	res, err := c.nodeClient.ComposeNode(ctx, &emptypb.Empty{})
@@ -120,12 +120,12 @@ func (c *ServerClient) ComposeNode(token, mk, wgPrivKey string) (*node.ComposeNo
 	return res, nil
 }
 
-func (c *ServerClient) ConnectLoginSession(mk string) (*login.LoginSessionResponse, error) {
+func (c *ServerClient) ConnectLoginSession(nk string) (*login.LoginSessionResponse, error) {
 	var (
 		msg = &login.LoginSessionResponse{}
 	)
 
-	md := metadata.New(map[string]string{utils.NodeKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	stream, err := c.loginClient.LoginSession(newctx, grpc.WaitForReady(true))
@@ -156,13 +156,13 @@ func (c *ServerClient) ConnectLoginSession(mk string) (*login.LoginSessionRespon
 	return msg, nil
 }
 
-func (c *ServerClient) SyncRemoteNodesConfig(mk, wgPrivKey string) (*node.SyncNodesResponse, error) {
+func (c *ServerClient) SyncRemoteNodesConfig(nk, wgPrivKey string) (*node.SyncNodesResponse, error) {
 	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
 	if err != nil {
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.NodeKey: mk, utils.WgPubKey: parsedKey.PublicKey().String()})
+	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String()})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	conf, err := c.nodeClient.SyncRemoteNodesConfig(ctx, &emptypb.Empty{})
@@ -172,8 +172,8 @@ func (c *ServerClient) SyncRemoteNodesConfig(mk, wgPrivKey string) (*node.SyncNo
 	return conf, nil
 }
 
-func (c *ServerClient) Connect(mk string) (*daemon.GetConnectionStatusResponse, error) {
-	md := metadata.New(map[string]string{utils.NodeKey: mk})
+func (c *ServerClient) Connect(nk string) (*daemon.GetConnectionStatusResponse, error) {
+	md := metadata.New(map[string]string{utils.NodeKey: nk})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	status, err := c.daemonClient.Connect(newctx, &emptypb.Empty{})
@@ -183,8 +183,8 @@ func (c *ServerClient) Connect(mk string) (*daemon.GetConnectionStatusResponse, 
 	return status, nil
 }
 
-func (c *ServerClient) Disconnect(mk string) (*daemon.GetConnectionStatusResponse, error) {
-	md := metadata.New(map[string]string{utils.NodeKey: mk})
+func (c *ServerClient) Disconnect(nk string) (*daemon.GetConnectionStatusResponse, error) {
+	md := metadata.New(map[string]string{utils.NodeKey: nk})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	status, err := c.daemonClient.Disconnect(newctx, &emptypb.Empty{})
@@ -194,8 +194,8 @@ func (c *ServerClient) Disconnect(mk string) (*daemon.GetConnectionStatusRespons
 	return status, nil
 }
 
-func (c *ServerClient) GetConnectionStatus(mk string) (*daemon.GetConnectionStatusResponse, error) {
-	md := metadata.New(map[string]string{utils.NodeKey: mk})
+func (c *ServerClient) GetConnectionStatus(nk string) (*daemon.GetConnectionStatusResponse, error) {
+	md := metadata.New(map[string]string{utils.NodeKey: nk})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	status, err := c.daemonClient.GetConnectionStatus(newctx, &emptypb.Empty{})

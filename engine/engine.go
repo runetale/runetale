@@ -19,7 +19,7 @@ import (
 type engine struct {
 	runelog *runelog.Runelog
 
-	mk        string
+	nk        string
 	tunName   string
 	ip        string
 	cidr      string
@@ -42,7 +42,7 @@ func NewEngine(
 	serverClient grpc.ServerClientImpl,
 	runelog *runelog.Runelog,
 	tunName string,
-	mk string,
+	nk string,
 	ip string,
 	cidr string,
 	wgPrivKey string,
@@ -64,7 +64,7 @@ func NewEngine(
 	return &engine{
 		runelog: runelog,
 
-		mk:        mk,
+		nk:        nk,
 		tunName:   tunName,
 		ip:        ip,
 		cidr:      cidr,

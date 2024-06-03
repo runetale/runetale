@@ -25,14 +25,14 @@ type Rcn struct {
 	serverClient grpc.ServerClientImpl
 	conf         *conf.Conf
 	iface        *iface.Iface
-	mk           string
+	nk           string
 	mu           *sync.Mutex
 	runelog      *runelog.Runelog
 }
 
 func NewRcn(
 	conf *conf.Conf,
-	mk string,
+	nk string,
 	ch chan struct{},
 	runelog *runelog.Runelog,
 ) *Rcn {
@@ -41,7 +41,7 @@ func NewRcn(
 		conf.SignalClient,
 		conf.ServerClient,
 		rcnsock.NewRcnSock(runelog, ch),
-		mk,
+		nk,
 		conf,
 		ch,
 		runelog,
@@ -51,7 +51,7 @@ func NewRcn(
 		cp:           cp,
 		serverClient: conf.ServerClient,
 		conf:         conf,
-		mk:           mk,
+		nk:           nk,
 		mu:           &sync.Mutex{},
 		runelog:      runelog,
 	}

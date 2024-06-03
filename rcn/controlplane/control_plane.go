@@ -5,8 +5,8 @@
 package controlplane
 
 // this package is responsible for communication with the signal server
-// it also has the structure of ice of the remote peer as a map key with the machine key of the remote peer
-// when the communication with the signal server is performed and operations are performed on the peer, they will basically be performed here.
+// it also has the structure of ice of the remote node as a map key with the Node key of the remote node
+// when the communication with the signal server is performed and operations are performed on the node, they will basically be performed here.
 //
 
 import (
@@ -32,8 +32,8 @@ type ControlPlane struct {
 
 	sock *rcnsock.RcnSock
 
-	peerConns map[string]*webrtc.Ice //  with ice structure per clientmachinekey
-	mk        string
+	peerConns map[string]*webrtc.Ice //  with ice structure per nodePey
+	nk        string
 	conf      *conf.Conf
 	stconf    *webrtc.StunTurnConfig
 
@@ -49,7 +49,7 @@ func NewControlPlane(
 	signalClient grpc.SignalClientImpl,
 	serverClient grpc.ServerClientImpl,
 	sock *rcnsock.RcnSock,
-	mk string,
+	nk string,
 	conf *conf.Conf,
 	ch chan struct{},
 	runelog *runelog.Runelog,
@@ -61,7 +61,7 @@ func NewControlPlane(
 		sock: sock,
 
 		peerConns: make(map[string]*webrtc.Ice),
-		mk:        mk,
+		nk:        nk,
 		conf:      conf,
 
 		mu:                  &sync.Mutex{},
@@ -129,25 +129,25 @@ func (c *ControlPlane) ConfigureStunTurnConf() error {
 }
 
 func (c *ControlPlane) receiveSignalRequest(
-	remotemk string,
+	remotenk string,
 	msgType negotiation.NegotiationType,
-	peer *webrtc.Ice,
+	node *webrtc.Ice,
 	uname string,
 	pwd string,
 	candidate string,
 ) error {
 	switch msgType {
 	case negotiation.NegotiationType_ANSWER:
-		peer.SendRemoteAnswerCh(remotemk, uname, pwd)
+		node.SendRemoteAnswerCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_OFFER:
-		peer.SendRemoteOfferCh(remotemk, uname, pwd)
+		node.SendRemoteOfferCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_CANDIDATE:
 		candidate, err := ice.UnmarshalCandidate(candidate)
 		if err != nil {
 			c.runelog.Logger.Errorf("can not unmarshal candidate => [%s]", candidate)
 			return err
 		}
-		peer.SendRemoteCandidate(candidate)
+		node.SendRemoteCandidate(candidate)
 	}
 
 	return nil
@@ -157,7 +157,7 @@ func (c *ControlPlane) ConnectSignalServer() {
 	go func() {
 		b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
 		operation := func() error {
-			err := c.signalClient.Connect(c.mk, func(res *negotiation.NegotiationRequest) error {
+			err := c.signalClient.Connect(c.nk, func(res *negotiation.NegotiationRequest) error {
 				c.mu.Lock()
 				defer c.mu.Unlock()
 
@@ -201,7 +201,7 @@ func (c *ControlPlane) ConnectSignalServer() {
 func (c *ControlPlane) initialOfferToRemotePeer() error {
 	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
 	operation := func() error {
-		res, err := c.serverClient.SyncRemoteNodesConfig(c.mk, c.conf.Spec.WgPrivateKey)
+		res, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
 		if err != nil {
 			return err
 		}
@@ -260,7 +260,7 @@ func (c *ControlPlane) syncRemotePeerConfig(remotePeers []*node.Node) error {
 	return nil
 }
 
-func (c *ControlPlane) newIce(peer *node.Node, myip, mycidr string) (*webrtc.Ice, error) {
+func (c *ControlPlane) newIce(node *node.Node, myip, mycidr string) (*webrtc.Ice, error) {
 	k, err := wgtypes.ParseKey(c.conf.Spec.WgPrivateKey)
 	if err != nil {
 		return nil, err
@@ -275,21 +275,21 @@ func (c *ControlPlane) newIce(peer *node.Node, myip, mycidr string) (*webrtc.Ice
 		pk = k.String()
 	}
 
-	remoteip := strings.Join(peer.GetAllowedIPs(), ",")
+	remoteip := strings.Join(node.GetAllowedIPs(), ",")
 	i := webrtc.NewIce(
 		c.signalClient,
 		c.serverClient,
 		c.sock,
-		peer.RemoteWgPubKey,
+		node.RemoteWgPubKey,
 		remoteip,
-		peer.GetRemoteNodeKey(),
+		node.GetRemoteNodeKey(),
 		myip,
 		mycidr,
 		k,
 		wg.WgPort,
 		c.conf.Spec.TunName,
 		pk,
-		c.mk,
+		c.nk,
 		c.stconf,
 		c.conf.Spec.BlackList,
 		c.runelog,
@@ -299,8 +299,8 @@ func (c *ControlPlane) newIce(peer *node.Node, myip, mycidr string) (*webrtc.Ice
 	return i, nil
 }
 
-func (c *ControlPlane) isExistPeer(remoteMachineKey string) bool {
-	_, exist := c.peerConns[remoteMachineKey]
+func (c *ControlPlane) isExistPeer(remoteNodeKey string) bool {
+	_, exist := c.peerConns[remoteNodeKey]
 	return exist
 }
 
@@ -308,33 +308,33 @@ func (c *ControlPlane) WaitForRemoteConn() {
 	for {
 		select {
 		case ice := <-c.waitForRemoteConnCh:
-			if !c.signalClient.IsReady() || !c.isExistPeer(ice.GetRemoteMachineKey()) {
-				c.runelog.Logger.Errorf("signal client is not available, execute loop. applicable remote peer => [%s]", ice.GetRemoteMachineKey())
+			if !c.signalClient.IsReady() || !c.isExistPeer(ice.GetRemoteNodeKey()) {
+				c.runelog.Logger.Errorf("signal client is not available, execute loop. applicable remote node => [%s]", ice.GetRemoteNodeKey())
 				continue
 			}
 
-			c.runelog.Logger.Debugf("starting gathering process for remote machine => [%s]", ice.GetRemoteMachineKey())
+			c.runelog.Logger.Debugf("starting gathering process for remote node => [%s]", ice.GetRemoteNodeKey())
 
 			err := ice.Setup()
 			if err != nil {
-				c.runelog.Logger.Errorf("failed to configure gathering process for [%s]", ice.GetRemoteMachineKey())
+				c.runelog.Logger.Errorf("failed to configure gathering process for [%s]", ice.GetRemoteNodeKey())
 				continue
 			}
 
 			err = ice.StartGatheringProcess()
 			if err != nil {
-				c.runelog.Logger.Errorf("failed to start gathering process for [%s]", ice.GetRemoteMachineKey())
+				c.runelog.Logger.Errorf("failed to start gathering process for [%s]", ice.GetRemoteNodeKey())
 				continue
 			}
 		}
 	}
 }
 
-// maintain flexible connections by updating remote machines
-// information on a regular basis, rather than only when other Machines join
-func (c *ControlPlane) SyncRemoteMachine() error {
+// maintain flexible connections by updating remote nodes
+// information on a regular basis, rather than only when other Nodes join
+func (c *ControlPlane) SyncRemoteNodes() error {
 	for {
-		res, err := c.serverClient.SyncRemoteNodesConfig(c.mk, c.conf.Spec.WgPrivateKey)
+		res, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
 		if err != nil {
 			return err
 		}
@@ -342,7 +342,7 @@ func (c *ControlPlane) SyncRemoteMachine() error {
 		if res.GetRemoteNodes() != nil {
 			err := c.syncRemotePeerConfig(res.GetRemoteNodes())
 			if err != nil {
-				c.runelog.Logger.Errorf("failed to sync remote peer config")
+				c.runelog.Logger.Errorf("failed to sync remote node config")
 				return err
 			}
 		}
@@ -350,7 +350,7 @@ func (c *ControlPlane) SyncRemoteMachine() error {
 }
 
 func (c *ControlPlane) Close() error {
-	for mk, ice := range c.peerConns {
+	for nk, ice := range c.peerConns {
 		if ice == nil {
 			continue
 		}
@@ -360,7 +360,7 @@ func (c *ControlPlane) Close() error {
 			return err
 		}
 
-		c.runelog.Logger.Debugf("close the %s", mk)
+		c.runelog.Logger.Debugf("close the %s", nk)
 	}
 
 	c.runelog.Logger.Debugf("finished in closing the control plane")
