@@ -159,7 +159,7 @@ func (c *SignalClient) Connect(mk string, handler func(msg *negotiation.Negotiat
 			return err
 		}
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to get grpc client stream for machinek key: %s", msg.DstNodeKey)
+			c.runelog.Logger.Errorf("failed to get grpc client stream for machine key: %s", msg.DstNodeKey)
 			return err
 		}
 
