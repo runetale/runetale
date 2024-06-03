@@ -9,7 +9,7 @@ import (
 
 	"github.com/runetale/client-go/runetale/runetale/v1/daemon"
 	"github.com/runetale/client-go/runetale/runetale/v1/login"
-	"github.com/runetale/client-go/runetale/runetale/v1/machine"
+	"github.com/runetale/client-go/runetale/runetale/v1/node"
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/system"
 	"github.com/runetale/runetale/utils"
@@ -20,23 +20,23 @@ import (
 )
 
 type ServerClientImpl interface {
-	LoginMachine(mk, wgPrivKey string) (*login.LoginMachineResponse, error)
-	ComposeMachine(token, mk, wgPrivKey string) (*machine.ComposeMachineResponse, error)
-	SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.SyncMachinesResponse, error)
-	ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error)
+	LoginNode(mk, wgPrivKey string) (*login.LoginNodeResponse, error)
+	ComposeNode(token, mk, wgPrivKey string) (*node.ComposeNodeResponse, error)
+	SyncRemoteNodesConfig(mk, wgPrivKey string) (*node.SyncNodesResponse, error)
+	ConnectLoginSession(mk string) (*login.LoginSessionResponse, error)
 	Connect(mk string) (*daemon.GetConnectionStatusResponse, error)
 	Disconnect(mk string) (*daemon.GetConnectionStatusResponse, error)
 	GetConnectionStatus(mk string) (*daemon.GetConnectionStatusResponse, error)
 }
 
 type ServerClient struct {
-	sysInfo       system.SysInfo
-	machineClient machine.MachineServiceClient
-	daemonClient  daemon.DaemonServiceClient
-	loginClient   login.LoginServiceClient
-	conn          *grpc.ClientConn
-	ctx           context.Context
-	runelog       *runelog.Runelog
+	sysInfo      system.SysInfo
+	nodeClient   node.NodeServiceClient
+	daemonClient daemon.DaemonServiceClient
+	loginClient  login.LoginServiceClient
+	conn         *grpc.ClientConn
+	ctx          context.Context
+	runelog      *runelog.Runelog
 }
 
 func NewServerClient(
@@ -45,17 +45,17 @@ func NewServerClient(
 	runelog *runelog.Runelog,
 ) ServerClientImpl {
 	return &ServerClient{
-		sysInfo:       sysInfo,
-		machineClient: machine.NewMachineServiceClient(conn),
-		daemonClient:  daemon.NewDaemonServiceClient(conn),
-		loginClient:   login.NewLoginServiceClient(conn),
-		conn:          conn,
-		ctx:           context.Background(),
-		runelog:       runelog,
+		sysInfo:      sysInfo,
+		nodeClient:   node.NewNodeServiceClient(conn),
+		daemonClient: daemon.NewDaemonServiceClient(conn),
+		loginClient:  login.NewLoginServiceClient(conn),
+		conn:         conn,
+		ctx:          context.Background(),
+		runelog:      runelog,
 	}
 }
 
-func (c *ServerClient) LoginMachine(mk, wgPrivKey string) (*login.LoginMachineResponse, error) {
+func (c *ServerClient) LoginNode(mk, wgPrivKey string) (*login.LoginNodeResponse, error) {
 	var (
 		ip   string
 		cidr string
@@ -66,10 +66,10 @@ func (c *ServerClient) LoginMachine(mk, wgPrivKey string) (*login.LoginMachineRe
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.WgPubKey: parsedKey.PublicKey().String()})
+	md := metadata.New(map[string]string{utils.NodeKey: mk, utils.WgPubKey: parsedKey.PublicKey().String()})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
-	res, err := c.loginClient.LoginMachine(ctx, &emptypb.Empty{})
+	res, err := c.loginClient.LoginNode(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
 		return "", "", err
 	}
 
-	msg, err := c.ConnectStreamPeerLoginSession(mk)
+	msg, err := c.ConnectLoginSession(mk)
 	if err != nil {
 		return "", "", err
 	}
@@ -103,16 +103,16 @@ func (c *ServerClient) loginBySession(mk, url string) (string, string, error) {
 	return msg.Ip, msg.Cidr, nil
 }
 
-func (c *ServerClient) ComposeMachine(token, mk, wgPrivKey string) (*machine.ComposeMachineResponse, error) {
+func (c *ServerClient) ComposeNode(token, mk, wgPrivKey string) (*node.ComposeNodeResponse, error) {
 	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
 	if err != nil {
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.AccessToken: token, utils.MachineKey: mk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	md := metadata.New(map[string]string{utils.AccessToken: token, utils.NodeKey: mk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
-	res, err := c.machineClient.ComposeMachine(ctx, &emptypb.Empty{})
+	res, err := c.nodeClient.ComposeNode(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -120,15 +120,15 @@ func (c *ServerClient) ComposeMachine(token, mk, wgPrivKey string) (*machine.Com
 	return res, nil
 }
 
-func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login.PeerLoginSessionResponse, error) {
+func (c *ServerClient) ConnectLoginSession(mk string) (*login.LoginSessionResponse, error) {
 	var (
-		msg = &login.PeerLoginSessionResponse{}
+		msg = &login.LoginSessionResponse{}
 	)
 
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	md := metadata.New(map[string]string{utils.NodeKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
-	stream, err := c.loginClient.StreamPeerLoginSession(newctx, grpc.WaitForReady(true))
+	stream, err := c.loginClient.LoginSession(newctx, grpc.WaitForReady(true))
 	if err != nil {
 		return nil, err
 	}
@@ -156,16 +156,16 @@ func (c *ServerClient) ConnectStreamPeerLoginSession(mk string) (*login.PeerLogi
 	return msg, nil
 }
 
-func (c *ServerClient) SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.SyncMachinesResponse, error) {
+func (c *ServerClient) SyncRemoteNodesConfig(mk, wgPrivKey string) (*node.SyncNodesResponse, error) {
 	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
 	if err != nil {
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.WgPubKey: parsedKey.PublicKey().String()})
+	md := metadata.New(map[string]string{utils.NodeKey: mk, utils.WgPubKey: parsedKey.PublicKey().String()})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
-	conf, err := c.machineClient.SyncRemoteMachinesConfig(ctx, &emptypb.Empty{})
+	conf, err := c.nodeClient.SyncRemoteNodesConfig(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (c *ServerClient) SyncRemoteMachinesConfig(mk, wgPrivKey string) (*machine.
 }
 
 func (c *ServerClient) Connect(mk string) (*daemon.GetConnectionStatusResponse, error) {
-	md := metadata.New(map[string]string{utils.MachineKey: mk})
+	md := metadata.New(map[string]string{utils.NodeKey: mk})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	status, err := c.daemonClient.Connect(newctx, &emptypb.Empty{})
@@ -184,7 +184,7 @@ func (c *ServerClient) Connect(mk string) (*daemon.GetConnectionStatusResponse, 
 }
 
 func (c *ServerClient) Disconnect(mk string) (*daemon.GetConnectionStatusResponse, error) {
-	md := metadata.New(map[string]string{utils.MachineKey: mk})
+	md := metadata.New(map[string]string{utils.NodeKey: mk})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	status, err := c.daemonClient.Disconnect(newctx, &emptypb.Empty{})
@@ -195,7 +195,7 @@ func (c *ServerClient) Disconnect(mk string) (*daemon.GetConnectionStatusRespons
 }
 
 func (c *ServerClient) GetConnectionStatus(mk string) (*daemon.GetConnectionStatusResponse, error) {
-	md := metadata.New(map[string]string{utils.MachineKey: mk})
+	md := metadata.New(map[string]string{utils.NodeKey: mk})
 	newctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	status, err := c.daemonClient.GetConnectionStatus(newctx, &emptypb.Empty{})

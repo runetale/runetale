@@ -14,8 +14,8 @@ import (
 	"sync"
 
 	"github.com/pion/ice/v2"
-	"github.com/runetale/client-go/runetale/runetale/v1/machine"
 	"github.com/runetale/client-go/runetale/runetale/v1/negotiation"
+	"github.com/runetale/client-go/runetale/runetale/v1/node"
 	"github.com/runetale/runetale/backoff"
 	"github.com/runetale/runetale/client/grpc"
 	"github.com/runetale/runetale/conf"
@@ -162,9 +162,9 @@ func (c *ControlPlane) ConnectSignalServer() {
 				defer c.mu.Unlock()
 
 				err := c.receiveSignalRequest(
-					res.GetDstPeerMachineKey(),
+					res.GetDstNodeKey(),
 					res.GetType(),
-					c.peerConns[res.GetDstPeerMachineKey()],
+					c.peerConns[res.GetDstNodeKey()],
 					res.GetUFlag(),
 					res.GetPwd(),
 					res.GetCandidate(),
@@ -201,22 +201,22 @@ func (c *ControlPlane) ConnectSignalServer() {
 func (c *ControlPlane) initialOfferToRemotePeer() error {
 	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
 	operation := func() error {
-		res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
+		res, err := c.serverClient.SyncRemoteNodesConfig(c.mk, c.conf.Spec.WgPrivateKey)
 		if err != nil {
 			return err
 		}
 
-		if res.GetRemotePeers() == nil {
+		if res.GetRemoteNodes() == nil {
 			return nil
 		}
 
-		for _, rp := range res.GetRemotePeers() {
+		for _, rp := range res.GetRemoteNodes() {
 			i, err := c.newIce(rp, res.Ip, res.Cidr)
 			if err != nil {
 				return err
 			}
 
-			c.peerConns[rp.RemoteClientMachineKey] = i
+			c.peerConns[rp.RemoteNodeKey] = i
 			c.waitForRemoteConnCh <- i
 		}
 
@@ -230,10 +230,10 @@ func (c *ControlPlane) initialOfferToRemotePeer() error {
 }
 
 // keep the latest state of Peers received from the server
-func (c *ControlPlane) syncRemotePeerConfig(remotePeers []*machine.RemotePeer) error {
+func (c *ControlPlane) syncRemotePeerConfig(remotePeers []*node.Node) error {
 	remotePeerMap := make(map[string]struct{})
 	for _, p := range remotePeers {
-		remotePeerMap[p.GetRemoteClientMachineKey()] = struct{}{}
+		remotePeerMap[p.GetRemoteNodeKey()] = struct{}{}
 	}
 
 	unnecessary := []string{}
@@ -260,7 +260,7 @@ func (c *ControlPlane) syncRemotePeerConfig(remotePeers []*machine.RemotePeer) e
 	return nil
 }
 
-func (c *ControlPlane) newIce(peer *machine.RemotePeer, myip, mycidr string) (*webrtc.Ice, error) {
+func (c *ControlPlane) newIce(peer *node.Node, myip, mycidr string) (*webrtc.Ice, error) {
 	k, err := wgtypes.ParseKey(c.conf.Spec.WgPrivateKey)
 	if err != nil {
 		return nil, err
@@ -282,7 +282,7 @@ func (c *ControlPlane) newIce(peer *machine.RemotePeer, myip, mycidr string) (*w
 		c.sock,
 		peer.RemoteWgPubKey,
 		remoteip,
-		peer.GetRemoteClientMachineKey(),
+		peer.GetRemoteNodeKey(),
 		myip,
 		mycidr,
 		k,
@@ -334,13 +334,13 @@ func (c *ControlPlane) WaitForRemoteConn() {
 // information on a regular basis, rather than only when other Machines join
 func (c *ControlPlane) SyncRemoteMachine() error {
 	for {
-		res, err := c.serverClient.SyncRemoteMachinesConfig(c.mk, c.conf.Spec.WgPrivateKey)
+		res, err := c.serverClient.SyncRemoteNodesConfig(c.mk, c.conf.Spec.WgPrivateKey)
 		if err != nil {
 			return err
 		}
 
-		if res.GetRemotePeers() != nil {
-			err := c.syncRemotePeerConfig(res.GetRemotePeers())
+		if res.GetRemoteNodes() != nil {
+			err := c.syncRemotePeerConfig(res.GetRemoteNodes())
 			if err != nil {
 				c.runelog.Logger.Errorf("failed to sync remote peer config")
 				return err

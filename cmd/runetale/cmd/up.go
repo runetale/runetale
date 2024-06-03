@@ -89,7 +89,7 @@ func execUp(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	ip, cidr, err := loginMachine(upArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(upArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err
@@ -131,16 +131,16 @@ func execUp(ctx context.Context, args []string) error {
 	return nil
 }
 
-func loginMachine(accessToken, mk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
+func loginNode(accessToken, mk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
 	if accessToken != "" {
-		res, err := client.ComposeMachine(accessToken, mk, wgPrivKey)
+		res, err := client.ComposeNode(accessToken, mk, wgPrivKey)
 		if err != nil {
 			return "", "", err
 		}
 		return res.GetIp(), res.GetCidr(), nil
 	}
 
-	res, err := client.LoginMachine(mk, wgPrivKey)
+	res, err := client.LoginNode(mk, wgPrivKey)
 	if err != nil {
 		return "", "", err
 	}

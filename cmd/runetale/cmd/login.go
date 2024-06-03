@@ -71,7 +71,7 @@ func execLogin(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	ip, cidr, err := loginMachine(loginArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(loginArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err
