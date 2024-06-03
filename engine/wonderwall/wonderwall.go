@@ -17,20 +17,21 @@ import (
 )
 
 type WonderWall struct {
-	sock *rcnsock.RcnSock
-
-	mu *sync.Mutex
-
+	sock    *rcnsock.RcnSock
+	mu      *sync.Mutex
+	ch      chan struct{}
 	runelog *runelog.Runelog
 }
 
 func NewWonderWall(
 	sock *rcnsock.RcnSock,
 	runelog *runelog.Runelog,
+	ch chan struct{},
 ) *WonderWall {
 	return &WonderWall{
 		sock:    sock,
 		mu:      &sync.Mutex{},
+		ch:      ch,
 		runelog: runelog,
 	}
 }
@@ -56,5 +57,5 @@ func (w *WonderWall) Start() {
 }
 
 func (w *WonderWall) Stop() {
-
+	close(w.ch)
 }
