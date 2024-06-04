@@ -74,9 +74,9 @@ func execDown(ctx context.Context, args []string) error {
 		paths.DefaultClientConfigFile(),
 		downArgs.debug,
 		downArgs.serverHost,
-		uint(upArgs.serverPort),
-		upArgs.signalHost,
-		uint(upArgs.signalPort),
+		uint(downArgs.serverPort),
+		downArgs.signalHost,
+		uint(downArgs.signalPort),
 		runelog,
 	)
 	if err != nil {
