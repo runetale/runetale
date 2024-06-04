@@ -88,7 +88,7 @@ func execUp(ctx context.Context, args []string) error {
 
 	ch := make(chan struct{})
 
-	r := rcn.NewRcn(conf, conf.NodePubKey, ch, runelog)
+	r := rcn.NewRcn(conf, conf.NodePubKey, ch, runelog, upArgs.debug)
 
 	if upArgs.daemon {
 		d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, runelog)

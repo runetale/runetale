@@ -20,12 +20,17 @@ import (
 	"github.com/runetale/runetale/paths"
 	"github.com/runetale/runetale/rcn"
 	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/types/flagtype"
 )
 
 var downArgs struct {
-	logFile  string
-	logLevel string
-	debug    bool
+	signalHost string
+	signalPort int64
+	serverHost string
+	serverPort int64
+	logFile    string
+	logLevel   string
+	debug      bool
 }
 
 var downCmd = &ffcli.Command{
@@ -33,6 +38,10 @@ var downCmd = &ffcli.Command{
 	ShortHelp: "down the runetaled",
 	FlagSet: (func() *flag.FlagSet {
 		fs := flag.NewFlagSet("down", flag.ExitOnError)
+		fs.StringVar(&upArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "grpc server host url")
+		fs.Int64Var(&upArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
+		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signaling server host url")
+		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signaling server host port")
 		fs.StringVar(&downArgs.logFile, "logfile", paths.DefaultRunetaledLogFile(), "set logfile path")
 		fs.StringVar(&downArgs.logLevel, "loglevel", runelog.InfoLevelStr, "set log level")
 		fs.BoolVar(&downArgs.debug, "debug", false, "is debug")
@@ -62,9 +71,9 @@ func execDown(ctx context.Context, args []string) error {
 
 	conf, err := conf.NewConf(
 		clientCtx,
-		upArgs.clientPath,
-		upArgs.debug,
-		upArgs.serverHost,
+		paths.DefaultClientConfigFile(),
+		downArgs.debug,
+		downArgs.serverHost,
 		uint(upArgs.serverPort),
 		upArgs.signalHost,
 		uint(upArgs.signalPort),
@@ -75,7 +84,7 @@ func execDown(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	r := rcn.NewRcn(conf, conf.NodePubKey, nil, runelog)
+	r := rcn.NewRcn(conf, conf.NodePubKey, nil, runelog, downArgs.debug)
 
 	err = r.Stop()
 	if err != nil {
