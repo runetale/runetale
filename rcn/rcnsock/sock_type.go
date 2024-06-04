@@ -19,7 +19,6 @@ type DialRunetaleStatus struct {
 }
 
 type RcnDialSock struct {
-	MessageType socketMessageType
-
+	MessageType        socketMessageType
 	DialRunetaleStatus *DialRunetaleStatus
 }

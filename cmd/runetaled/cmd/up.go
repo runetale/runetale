@@ -55,7 +55,6 @@ var upCmd = &ffcli.Command{
 	Exec: execUp,
 }
 
-// t_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDgzNDkzNTk5NDg0ODU5MTQzMzUiLCJkZXBsb3ltZW50X21ldGhvZCI6IkRPQ0tFUiIsIm5hbWUiOiJ0ZXN0IiwiZGVzYyI6InRlc3QiLCJwb3J0Ijo4MCwiZXhwIjoxNzE5NTQzMjE0LCJqdGkiOiJiNjlkMjk1Yy0wZmQ4LTRjMmQtYmZiNC02OWQ5NWZjYjc1YmQiLCJpYXQiOjE3MTY5NTEyMTQsImlzcyI6InJ1bmV0YWxlIn0.gtzJdihNEEgraBCxE0mYUFfUVx1q2erS9kKR_nKpSBY
 func execUp(ctx context.Context, args []string) error {
 	runelog, err := runelog.NewRunelog("runetaled up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
 	if err != nil {

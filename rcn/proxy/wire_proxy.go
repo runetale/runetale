@@ -29,9 +29,6 @@ type WireProxy struct {
 
 	agent *ice.Agent
 
-	// localProxyBuffer  []byte
-	// remoteProxyBuffer []byte
-
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 
@@ -60,9 +57,6 @@ func NewWireProxy(
 		wgIface:      wgiface,
 		listenAddr:   listenAddr,
 		preSharedKey: presharedkey,
-
-		// localProxyBuffer:  make([]byte, 1500),
-		// remoteProxyBuffer: make([]byte, 1500),
 
 		agent: agent,
 

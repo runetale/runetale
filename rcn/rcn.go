@@ -10,7 +10,12 @@ package rcn
 //
 
 import (
+	"encoding/json"
+	"net/http"
+	_ "net/http/pprof"
+	"runtime"
 	"sync"
+	"time"
 
 	"github.com/runetale/runetale/client/grpc"
 	"github.com/runetale/runetale/conf"
@@ -28,6 +33,7 @@ type Rcn struct {
 	nk           string
 	mu           *sync.Mutex
 	runelog      *runelog.Runelog
+	debug        bool
 }
 
 func NewRcn(
@@ -35,6 +41,7 @@ func NewRcn(
 	nk string,
 	ch chan struct{},
 	runelog *runelog.Runelog,
+	debug bool,
 ) *Rcn {
 
 	cp := controlplane.NewControlPlane(
@@ -54,10 +61,10 @@ func NewRcn(
 		nk:           nk,
 		mu:           &sync.Mutex{},
 		runelog:      runelog,
+		debug:        debug,
 	}
 }
 
-// TODO(snt): also set up a grpc server to talk to cli?
 // call Setup function before Start
 func (r *Rcn) Setup(ip, cidr string) error {
 	err := r.createIface(ip, cidr)
@@ -80,7 +87,50 @@ func (r *Rcn) Start() {
 
 	go r.cp.ConnectSock(r.iface.IP, r.iface.CIDR)
 
+	r.systemMonitor()
+
 	r.runelog.Logger.Debugf("started rcn")
+}
+
+func (r *Rcn) systemMonitor() {
+	if r.debug {
+		go func() {
+			http.ListenAndServe("localhost:6060", nil)
+			m := struct {
+				Alloc,
+				TotalAlloc,
+				Sys,
+				Mallocs,
+				Frees,
+				LiveObjects,
+				PauseTotalNs uint64
+
+				NumGC        uint32
+				NumGoroutine int
+			}{}
+
+			var rtm runtime.MemStats
+			for {
+				select {
+				case _ = <-time.NewTicker(10000 * time.Millisecond).C:
+					runtime.ReadMemStats(&rtm)
+
+					m.NumGoroutine = runtime.NumGoroutine()
+					m.Alloc = rtm.Alloc
+					m.TotalAlloc = rtm.TotalAlloc
+					m.Sys = rtm.Sys
+					m.Mallocs = rtm.Mallocs
+					m.Frees = rtm.Frees
+					m.LiveObjects = m.Mallocs - m.Frees
+					m.PauseTotalNs = rtm.PauseTotalNs
+					m.NumGC = rtm.NumGC
+
+					b, _ := json.Marshal(m)
+					r.runelog.Logger.Debugf(string(b))
+				}
+			}
+		}()
+	}
 }
 
 func (r *Rcn) createIface(ip, cidr string) error {
