@@ -4,9 +4,6 @@
 
 package rcnsock
 
-// TODO: (shinta) is this safe?
-// appropriate permission and feel it would be better to
-// have a process that creates a file
 const sockaddr = "/tmp/rcn.sock"
 
 type socketMessageType int
@@ -16,13 +13,12 @@ const (
 )
 
 type DialRunetaleStatus struct {
-	Ip     string
-	Cidr   string
-	Status string
+	Ip         string
+	Cidr       string
+	ConnStatus string
 }
 
 type RcnDialSock struct {
-	MessageType socketMessageType
-
+	MessageType        socketMessageType
 	DialRunetaleStatus *DialRunetaleStatus
 }

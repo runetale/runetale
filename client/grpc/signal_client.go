@@ -24,10 +24,10 @@ import (
 )
 
 type SignalClientImpl interface {
-	Candidate(dstmk, srcmk string, candidate ice.Candidate) error
-	Offer(dstmk, srcmk string, uFlag string, pwd string) error
-	Answer(dstmk, srcmk string, uFlag string, pwd string) error
-	Connect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error
+	Candidate(dstnk, srcnk string, candidate ice.Candidate) error
+	Offer(dstnk, srcnk string, uFlag string, pwd string) error
+	Answer(dstnk, srcnk string, uFlag string, pwd string) error
+	Connect(nk string, handler func(msg *negotiation.NegotiationRequest) error) error
 
 	WaitStartConnect()
 	IsReady() bool
@@ -73,14 +73,14 @@ func NewSignalClient(
 	}
 }
 
-func (c *SignalClient) Candidate(dstmk, srcmk string, candidate ice.Candidate) error {
+func (c *SignalClient) Candidate(dstnk, srcnk string, candidate ice.Candidate) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	msg := &negotiation.CandidateRequest{
-		DstPeerMachineKey: dstmk,
-		SrcPeerMachineKey: srcmk,
-		Candidate:         candidate.Marshal(),
+		DstNodeKey: dstnk,
+		SrcNodeKey: srcnk,
+		Candidate:  candidate.Marshal(),
 	}
 
 	_, err := c.negClient.Candidate(ctx, msg)
@@ -91,7 +91,7 @@ func (c *SignalClient) Candidate(dstmk, srcmk string, candidate ice.Candidate) e
 }
 
 func (c *SignalClient) Offer(
-	dstmk, srcmk string,
+	dstnk, srcnk string,
 	uFlag string,
 	pwd string,
 ) error {
@@ -99,10 +99,10 @@ func (c *SignalClient) Offer(
 	defer cancel()
 
 	msg := &negotiation.HandshakeRequest{
-		DstPeerMachineKey: dstmk,
-		SrcPeerMachineKey: srcmk,
-		UFlag:             uFlag,
-		Pwd:               pwd,
+		DstNodeKey: dstnk,
+		SrcNodeKey: srcnk,
+		UFlag:      uFlag,
+		Pwd:        pwd,
 	}
 	_, err := c.negClient.Offer(ctx, msg)
 	if err != nil {
@@ -112,7 +112,7 @@ func (c *SignalClient) Offer(
 }
 
 func (c *SignalClient) Answer(
-	dstmk, srcmk string,
+	dstnk, srcnk string,
 	uFlag string,
 	pwd string,
 ) error {
@@ -120,10 +120,10 @@ func (c *SignalClient) Answer(
 	defer cancel()
 
 	msg := &negotiation.HandshakeRequest{
-		DstPeerMachineKey: dstmk,
-		SrcPeerMachineKey: srcmk,
-		UFlag:             uFlag,
-		Pwd:               pwd,
+		DstNodeKey: dstnk,
+		SrcNodeKey: srcnk,
+		UFlag:      uFlag,
+		Pwd:        pwd,
 	}
 	_, err := c.negClient.Answer(ctx, msg)
 	if err != nil {
@@ -132,8 +132,8 @@ func (c *SignalClient) Answer(
 	return nil
 }
 
-func (c *SignalClient) Connect(mk string, handler func(msg *negotiation.NegotiationRequest) error) error {
-	md := metadata.New(map[string]string{utils.MachineKey: mk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+func (c *SignalClient) Connect(nk string, handler func(msg *negotiation.NegotiationRequest) error) error {
+	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	stream, err := c.negClient.Connect(ctx, grpc.WaitForReady(true))
@@ -155,17 +155,17 @@ func (c *SignalClient) Connect(mk string, handler func(msg *negotiation.Negotiat
 	for {
 		msg, err := stream.Recv()
 		if err == io.EOF {
-			c.runelog.Logger.Errorf("connect stream return to EOF, received by [%s]", mk)
+			c.runelog.Logger.Errorf("connect stream return to EOF, received by [%s]", nk)
 			return err
 		}
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to get grpc client stream for machinek key: %s", msg.DstPeerMachineKey)
+			c.runelog.Logger.Errorf("failed to get grpc client stream for node key: %s", msg.DstNodeKey)
 			return err
 		}
 
 		err = handler(msg)
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to handle grpc client stream stream in machine key: %s", msg.DstPeerMachineKey)
+			c.runelog.Logger.Errorf("failed to handle grpc client stream stream in node key: %s", msg.DstNodeKey)
 			return err
 		}
 	}

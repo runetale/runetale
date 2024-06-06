@@ -45,12 +45,12 @@ var upCmd = &ffcli.Command{
 		fs := flag.NewFlagSet("up", flag.ExitOnError)
 		fs.StringVar(&upArgs.clientPath, "path", paths.DefaultClientConfigFile(), "client default config file")
 		fs.StringVar(&upArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "server host")
-		fs.StringVar(&upArgs.accessToken, "access-token", "", "launch peer with access token")
+		fs.StringVar(&upArgs.accessToken, "access-token", "", "launch node with access token")
 		fs.Int64Var(&upArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
 		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
 		fs.StringVar(&upArgs.logFile, "logfile", paths.DefaultClientLogFile(), "set logfile path")
-		fs.StringVar(&upArgs.logLevel, "loglevel", runelog.InfoLevelStr, "set log level")
+		fs.StringVar(&upArgs.logLevel, "loglevel", runelog.DebugLevelStr, "set log level")
 		fs.BoolVar(&upArgs.debug, "debug", false, "is debug")
 		return fs
 	})(),
@@ -84,12 +84,12 @@ func execUp(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if !isInstallRunetaledDaemon(runelog) || !isRunningRunetaledProcess(runelog) {
-		runelog.Logger.Warnf("You need to activate runetaled. execute this command 'runetaled up'")
+	if !isInstallRunetaledDaemon(runelog) && !isRunningRunetaledProcess(runelog) {
+		runelog.Logger.Warnf("you need to activate runetaled. execute this command 'runetaled up'")
 		return nil
 	}
 
-	ip, cidr, err := loginMachine(upArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(upArgs.accessToken, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err
@@ -100,7 +100,7 @@ func execUp(ctx context.Context, args []string) error {
 		c.ServerClient,
 		runelog,
 		c.Spec.TunName,
-		c.MachinePubKey,
+		c.NodePubKey,
 		ip,
 		cidr,
 		c.Spec.WgPrivateKey,
@@ -131,16 +131,16 @@ func execUp(ctx context.Context, args []string) error {
 	return nil
 }
 
-func loginMachine(accessToken, mk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
+func loginNode(accessToken, nk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
 	if accessToken != "" {
-		res, err := client.CreateMachineWithAccessToken(accessToken, mk, wgPrivKey)
+		res, err := client.ComposeNode(accessToken, nk, wgPrivKey)
 		if err != nil {
 			return "", "", err
 		}
 		return res.GetIp(), res.GetCidr(), nil
 	}
 
-	res, err := client.LoginMachine(mk, wgPrivKey)
+	res, err := client.LoginNode(nk, wgPrivKey)
 	if err != nil {
 		return "", "", err
 	}
@@ -160,7 +160,7 @@ func upEngine(
 ) error {
 	pctx, cancel := context.WithCancel(ctx)
 
-	engine, err := engine.Newengine(
+	engine, err := engine.NewEngine(
 		serverClient,
 		runelog,
 		tunName,

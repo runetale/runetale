@@ -45,15 +45,15 @@ func NewIface(
 	}
 }
 
-func (i *Iface) ConfigureToRemotePeer(
-	remotePeerPubKey, remoteip string,
+func (i *Iface) ConfigureRemoteNodePeer(
+	remoteNodePubKey, remoteip string,
 	endpoint *net.UDPAddr,
 	keepAlive time.Duration,
 	preSharedKey string,
 ) error {
 	i.runelog.Logger.Debugf(
-		"configuring %s to remote peer [%s:%s], remote endpoint [%s:%d]",
-		i.Tun, remotePeerPubKey, remoteip, endpoint.IP.String(), endpoint.Port,
+		"configuring %s to remote node [%s:%s], remote endpoint [%s:%d]",
+		i.Tun, remoteNodePubKey, remoteip, endpoint.IP.String(), endpoint.Port,
 	)
 
 	_, ipNet, err := net.ParseCIDR(remoteip)
@@ -64,9 +64,9 @@ func (i *Iface) ConfigureToRemotePeer(
 
 	i.runelog.Logger.Debugf("allowed remote ip [%s]", ipNet.IP.String())
 
-	parsedRemotePeerPubKey, err := wgtypes.ParseKey(remotePeerPubKey)
+	parsedRemoteNodePubKey, err := wgtypes.ParseKey(remoteNodePubKey)
 	if err != nil {
-		i.runelog.Logger.Errorf("failed to remote peer pub key")
+		i.runelog.Logger.Errorf("failed to remote node pub key")
 		return err
 	}
 
@@ -80,7 +80,7 @@ func (i *Iface) ConfigureToRemotePeer(
 	}
 
 	peer := wgtypes.PeerConfig{
-		PublicKey:                   parsedRemotePeerPubKey,
+		PublicKey:                   parsedRemoteNodePubKey,
 		ReplaceAllowedIPs:           true,
 		AllowedIPs:                  []net.IPNet{*ipNet},
 		PersistentKeepaliveInterval: &keepAlive,

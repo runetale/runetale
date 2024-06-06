@@ -6,7 +6,6 @@ package engine
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"github.com/runetale/runetale/client/grpc"
@@ -20,7 +19,7 @@ import (
 type engine struct {
 	runelog *runelog.Runelog
 
-	mk        string
+	nk        string
 	tunName   string
 	ip        string
 	cidr      string
@@ -29,6 +28,7 @@ type engine struct {
 	blackList []string
 
 	sock *rcnsock.RcnSock
+	ww   *wonderwall.WonderWall
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -38,11 +38,11 @@ type engine struct {
 	rootch chan struct{}
 }
 
-func Newengine(
+func NewEngine(
 	serverClient grpc.ServerClientImpl,
 	runelog *runelog.Runelog,
 	tunName string,
-	mk string,
+	nk string,
 	ip string,
 	cidr string,
 	wgPrivKey string,
@@ -59,11 +59,12 @@ func Newengine(
 	mu := &sync.Mutex{}
 
 	sock := rcnsock.NewRcnSock(runelog, ch)
+	ww := wonderwall.NewWonderWall(sock, runelog, ch)
 
 	return &engine{
 		runelog: runelog,
 
-		mk:        mk,
+		nk:        nk,
 		tunName:   tunName,
 		ip:        ip,
 		cidr:      cidr,
@@ -72,6 +73,7 @@ func Newengine(
 		blackList: blackList,
 
 		sock: sock,
+		ww:   ww,
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -83,8 +85,11 @@ func Newengine(
 }
 
 func (d *engine) startWonderWall() {
-	ww := wonderwall.NewWonderWall(d.sock, d.runelog)
-	ww.Start()
+	d.ww.Start()
+}
+
+func (d *engine) stopWonderWall() {
+	d.ww.Stop()
 }
 
 func (d *engine) Start() error {
@@ -99,7 +104,14 @@ func (d *engine) Start() error {
 	}()
 	<-d.rootch
 
-	return errors.New("stop the engine")
+	d.Stop()
+
+	return nil
 }
 
-// StopはUnixDomainSocketにつなげて、runetaledをdownさせる
+func (d *engine) Stop() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	d.stopWonderWall()
+}

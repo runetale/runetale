@@ -5,4 +5,4 @@ sudo ./runetaled up -signal-host=$SIGNAL_HOST \
     -signal-port=$SIGNAL_PORT \
     -server-port=$SERVER_PORT \
     -daemon=$IS_DEAMON \
-    -debug=$IS_DEBUG \
+    -debug=$IS_DEBUG

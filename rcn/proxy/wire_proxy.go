@@ -18,8 +18,8 @@ type WireProxy struct {
 	iface *iface.Iface
 
 	// proxy config
-	remoteWgPubKey string // remote peer wg pub key
-	remoteIp       string // remote peer ip
+	remoteWgPubKey string // remote node wg pub key
+	remoteIp       string // remote node ip
 	wgIface        string // your wg iface
 	listenAddr     string // proxy addr
 	preSharedKey   string // your preshared key
@@ -28,9 +28,6 @@ type WireProxy struct {
 	localConn  net.Conn
 
 	agent *ice.Agent
-
-	// localProxyBuffer  []byte
-	// remoteProxyBuffer []byte
 
 	ctx        context.Context
 	cancelFunc context.CancelFunc
@@ -61,9 +58,6 @@ func NewWireProxy(
 		listenAddr:   listenAddr,
 		preSharedKey: presharedkey,
 
-		// localProxyBuffer:  make([]byte, 1500),
-		// remoteProxyBuffer: make([]byte, 1500),
-
 		agent: agent,
 
 		ctx:        ctx,
@@ -93,7 +87,7 @@ func (w *WireProxy) configureNoProxy() error {
 	}
 	udpAddr.Port = wg.WgPort
 
-	err = w.iface.ConfigureToRemotePeer(
+	err = w.iface.ConfigureRemoteNodePeer(
 		w.remoteWgPubKey,
 		w.remoteIp,
 		udpAddr,
@@ -101,7 +95,7 @@ func (w *WireProxy) configureNoProxy() error {
 		w.preSharedKey,
 	)
 	if err != nil {
-		w.runelog.Logger.Errorf("failed to configure remote peer, %s", err.Error())
+		w.runelog.Logger.Errorf("failed to start no proxy, %s", err.Error())
 		return err
 	}
 
@@ -117,7 +111,7 @@ func (w *WireProxy) configureWireProxy() error {
 		return err
 	}
 
-	err = w.iface.ConfigureToRemotePeer(
+	err = w.iface.ConfigureRemoteNodePeer(
 		w.remoteWgPubKey,
 		w.remoteIp,
 		udpAddr,
@@ -125,7 +119,7 @@ func (w *WireProxy) configureWireProxy() error {
 		w.preSharedKey,
 	)
 	if err != nil {
-		w.runelog.Logger.Errorf("failed to configure remote peer, %s", err.Error())
+		w.runelog.Logger.Errorf("failed to start wire proxy, %s", err.Error())
 		return err
 	}
 

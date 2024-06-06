@@ -5,7 +5,7 @@
 package utils
 
 const (
-	MachineKey  = "machine-key"
+	NodeKey     = "node-key"
 	OS          = "os"
 	HostName    = "hostname"
 	WgPubKey    = "wg-pub-key"

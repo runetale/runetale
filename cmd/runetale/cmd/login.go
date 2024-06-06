@@ -35,7 +35,7 @@ var loginCmd = &ffcli.Command{
 	ShortHelp:  "login to runetale, start the management server and then run it",
 	FlagSet: (func() *flag.FlagSet {
 		fs := flag.NewFlagSet("login", flag.ExitOnError)
-		fs.StringVar(&loginArgs.accessToken, "access-token", "", "launch peer with access token")
+		fs.StringVar(&loginArgs.accessToken, "access-token", "", "launch node with access token")
 		fs.StringVar(&loginArgs.clientPath, "path", paths.DefaultClientConfigFile(), "client default config file")
 		fs.StringVar(&loginArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "server host")
 		fs.Int64Var(&loginArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
@@ -71,7 +71,7 @@ func execLogin(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	ip, cidr, err := loginMachine(loginArgs.accessToken, c.MachinePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(loginArgs.accessToken, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err

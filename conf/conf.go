@@ -13,15 +13,15 @@ import (
 )
 
 type Conf struct {
-	SignalClient  grpc_client.SignalClientImpl
-	ServerClient  grpc_client.ServerClientImpl
-	Spec          *Spec
-	MachinePubKey string
+	SignalClient grpc_client.SignalClientImpl
+	ServerClient grpc_client.ServerClientImpl
+	Spec         *Spec
+	NodePubKey   string
 }
 
 // note: (snt)
 // NewConf creating Conf structure for file store and specs.
-// file store cached wg privatekey on peer.
+// file store cached wg privatekey on node.
 // specs cached signal and server hosts
 func NewConf(
 	clientCtx context.Context,
@@ -84,10 +84,10 @@ func NewConf(
 	runelog.Logger.Infof("connect succeded [%s]", spec.GetSignalHost())
 
 	return &Conf{
-		SignalClient:  signalClient,
-		ServerClient:  serverClient,
-		Spec:          spec,
-		MachinePubKey: cs.GetPublicKey(),
+		SignalClient: signalClient,
+		ServerClient: serverClient,
+		Spec:         spec,
+		NodePubKey:   cs.GetPublicKey(),
 	}, nil
 
 }

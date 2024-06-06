@@ -17,32 +17,33 @@ import (
 )
 
 type WonderWall struct {
-	sock *rcnsock.RcnSock
-
-	mu *sync.Mutex
-
+	sock    *rcnsock.RcnSock
+	mu      *sync.Mutex
+	ch      chan struct{}
 	runelog *runelog.Runelog
 }
 
 func NewWonderWall(
 	sock *rcnsock.RcnSock,
 	runelog *runelog.Runelog,
+	ch chan struct{},
 ) *WonderWall {
 	return &WonderWall{
 		sock:    sock,
 		mu:      &sync.Mutex{},
+		ch:      ch,
 		runelog: runelog,
 	}
 }
 
 func (w *WonderWall) dialRunetaleStatus() error {
-	ds, err := w.sock.DialRunetaleStatus()
+	ds, err := w.sock.DialRunetaledStatus()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("runetale connect to server status => [%s]\n", ds.Status)
-	fmt.Printf("runetale ip => [%s/%s]", ds.Ip, ds.Cidr)
+	w.runelog.Logger.Debugf("runetale connect to signal server status => [%s]", ds.ConnStatus)
+	w.runelog.Logger.Debugf("runetale ip => [%s/%s]", ds.Ip, ds.Cidr)
 
 	return nil
 }
@@ -56,5 +57,5 @@ func (w *WonderWall) Start() {
 }
 
 func (w *WonderWall) Stop() {
-
+	close(w.ch)
 }
