@@ -101,6 +101,14 @@ github.com/runetale/client-go v0.0.0-20240604045009-d633623e37f0 h1:8viyFCltlCDF
 github.com/runetale/client-go v0.0.0-20240604045009-d633623e37f0/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
 github.com/runetale/client-go v0.0.0-20240606095933-81d48ca65302 h1:5VLiKEnzdgqpVxHMC57SZTaxrzzG/IYHJoiWCaPnO/s=
 github.com/runetale/client-go v0.0.0-20240606095933-81d48ca65302/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
+github.com/runetale/client-go v0.0.0-20240607061027-ffa87deed91e h1:bby3oON9sOiZJyOrgzIM6RnSGghN6TTuK0sm6OPY8XE=
+github.com/runetale/client-go v0.0.0-20240607061027-ffa87deed91e/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
+github.com/runetale/client-go v0.0.0-20240607084012-c4b9668c9b42 h1:niO/Yc3S8a1I1skrwolz7xsrbreyp7U+AYUL7CfRksg=
+github.com/runetale/client-go v0.0.0-20240607084012-c4b9668c9b42/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
+github.com/runetale/client-go v0.0.0-20240608024952-8af0b95c740c h1:3KmThSztFb3XNuvv1QRXRU0z/0VkCxRgIT3RLV7pjWk=
+github.com/runetale/client-go v0.0.0-20240608024952-8af0b95c740c/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
+github.com/runetale/client-go v0.0.0-20240608080238-11788edfc888 h1:J/RbCr4Udx7iacMXHDVVQDtOfobG5U2sVRp3IcdvfYY=
+github.com/runetale/client-go v0.0.0-20240608080238-11788edfc888/go.mod h1:GGlN7nNAgzg2xwRZVv8i9GFpIfqAcnS72JMHb8Fw/0c=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
