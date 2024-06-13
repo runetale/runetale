@@ -6,91 +6,85 @@ package iface
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/runetale/runetale/distro"
-	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
 	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func isWireGuardModule(
-	runelog *runelog.Runelog,
-) bool {
+func isWireGuardModule() bool {
 	_, err := utils.ExecCmd("modinfo wireguard")
 	return err == nil
 }
 
 func CreateIface(
 	i *Iface,
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) error {
 	addr := i.IP + "/" + i.CIDR
 
-	if distro.Get() == distro.NixOS {
-		return createWithKernelSpace(i.Tun, i.WgPrivateKey, addr, runelog)
+	if isWireGuardModule() {
+		return createWithKernelSpace(i.Tun, i.WgPrivateKey, addr, logger)
 	}
 
-	if isWireGuardModule(runelog) {
-		return createWithKernelSpace(i.Tun, i.WgPrivateKey, addr, runelog)
-	}
 	return createWithUserSpace(i, addr)
 }
 
 func RemoveIface(
 	tunname string,
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) error {
 	ipCmd, err := exec.LookPath("ip")
 	if err != nil {
-		runelog.Logger.Errorf("failed to ip command, because %s", err.Error())
+		log.log.Errorf("failed to ip command, because %s", err.Error())
 		return err
 	}
 
 	_, err = utils.ExecCmd(ipCmd + " link delete dev " + tunname)
 	if err != nil {
-		runelog.Logger.Errorf("failed to link del, because %s", err.Error())
+		log.log.Errorf("failed to link del, because %s", err.Error())
 	}
 	return nil
 }
 
 func createWithKernelSpace(
 	ifaceName, privateKey, address string,
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) error {
 	ipCmd, err := exec.LookPath("ip")
 	if err != nil {
-		runelog.Logger.Errorf("failed to ip command: %s", err.Error())
+		log.log.Errorf("failed to ip command: %s", err.Error())
 		return err
 	}
 
 	key, err := wgtypes.ParseKey(privateKey)
 	if err != nil {
-		runelog.Logger.Errorf("failed to parsing private key: %s", err.Error())
+		log.log.Errorf("failed to parsing private key: %s", err.Error())
 		return err
 	}
 
 	wgClient, err := wgctrl.New()
 	if err != nil {
-		runelog.Logger.Errorf("failed to wireguard client: %s", err.Error())
+		log.log.Errorf("failed to wireguard client: %s", err.Error())
 		return err
 	}
 	defer wgClient.Close()
 
 	_, err = utils.ExecCmd(ipCmd + " link add dev " + ifaceName + " type wireguard ")
 	if err != nil {
-		runelog.Logger.Errorf("failed to link add dev. ifaceName: [%s]", ifaceName)
+		log.log.Errorf("failed to link add dev. ifaceName: [%s]", ifaceName)
 		return err
 	}
 
 	_, err = utils.ExecCmd(ipCmd + " address add dev " + ifaceName + " " + address)
 	if err != nil {
-		runelog.Logger.Errorf("failed to address add dev. ifaceName: [%s], address: [%s]", ifaceName, address)
+		log.log.Errorf("failed to address add dev. ifaceName: [%s], address: [%s]", ifaceName, address)
 		return err
 	}
 
@@ -105,22 +99,22 @@ func createWithKernelSpace(
 
 	_, err = wgClient.Device(ifaceName)
 	if err != nil {
-		runelog.Logger.Errorf("failed to create wireguard device. ifaceName: [%s]", ifaceName)
+		log.log.Errorf("failed to create wireguard device. ifaceName: [%s]", ifaceName)
 		return err
 	}
 
 	err = wgClient.ConfigureDevice(ifaceName, wgConf)
 	if err != nil {
 		if os.IsNotExist(err) {
-			runelog.Logger.Errorf("device does not exist %s.", ifaceName)
+			log.log.Errorf("device does not exist %s.", ifaceName)
 		} else {
-			runelog.Logger.Errorf("%s.", err.Error())
+			log.log.Errorf("%s.", err.Error())
 		}
 		return err
 	}
 
 	if _, err := utils.ExecCmd(ipCmd + " link set up dev " + ifaceName); err != nil {
-		runelog.Logger.Errorf("%s, %s", ifaceName, err.Error())
+		log.log.Errorf("%s, %s", ifaceName, err.Error())
 		return err
 	}
 	return nil

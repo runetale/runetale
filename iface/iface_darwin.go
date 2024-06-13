@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
 	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/conn"
@@ -21,24 +20,21 @@ import (
 
 func CreateIface(
 	i *Iface,
-	runelog *runelog.Runelog,
 ) error {
 	addr := i.IP + "/" + i.CIDR
 
 	err := i.createWithUserSpace(i.Tun, addr)
 	if err != nil {
-		runelog.Logger.Errorf("failed to create user space, %v", err)
 		return err
 	}
 
 	key, err := wgtypes.ParseKey(i.WgPrivateKey)
 	if err != nil {
-		runelog.Logger.Warnf("failed to parsing wireguard private key, %v", err)
 		return err
 	}
 
 	fwmark := 0
-	port := wg.WgPort
+	port := wg.DefaultWgPort
 
 	config := wgtypes.Config{
 		PrivateKey:   &key,
@@ -52,17 +48,14 @@ func CreateIface(
 
 func RemoveIface(
 	tunname string,
-	runelog *runelog.Runelog,
 ) error {
 	ipCmd, err := exec.LookPath("ifconfig")
 	if err != nil {
-		runelog.Logger.Errorf("failed to lookup ip command, %s", err.Error())
 		return err
 	}
 
 	_, err = utils.ExecCmd(ipCmd + fmt.Sprintf(" %s", tunname) + " down")
 	if err != nil {
-		runelog.Logger.Errorf("failed to ifconfig delete, because %s", err.Error())
 	}
 
 	return nil

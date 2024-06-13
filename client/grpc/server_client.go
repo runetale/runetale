@@ -10,23 +10,23 @@ import (
 	"github.com/runetale/client-go/runetale/runetale/v1/daemon"
 	"github.com/runetale/client-go/runetale/runetale/v1/login"
 	"github.com/runetale/client-go/runetale/runetale/v1/node"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 	"github.com/runetale/runetale/system"
 	"github.com/runetale/runetale/utils"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type ServerClientImpl interface {
-	LoginNode(nk, wgPrivKey string) (*login.LoginNodeResponse, error)
-	ComposeNode(token, nk, wgPrivKey string) (*node.ComposeNodeResponse, error)
-	SyncRemoteNodesConfig(nk, wgPrivKey string) (*node.SyncNodesResponse, error)
+	LoginNode(nk, wgPubKey string) (*login.LoginNodeResponse, error)
+	ComposeNode(composeKey, nk, wgPubKey string) (*node.ComposeNodeResponse, error)
+	SyncRemoteNodesConfig(nk, wgPubKey string) (*node.SyncNodesResponse, error)
 	ConnectLoginSession(nk string) (*login.LoginSessionResponse, error)
 	Connect(nk string) (*daemon.GetConnectionStatusResponse, error)
 	Disconnect(nk string) (*daemon.GetConnectionStatusResponse, error)
 	GetConnectionStatus(nk string) (*daemon.GetConnectionStatusResponse, error)
+	GetNetworkMap(nk, wgPubKey string) (*node.NetworkMapResponse, error)
 }
 
 type ServerClient struct {
@@ -36,13 +36,13 @@ type ServerClient struct {
 	loginClient  login.LoginServiceClient
 	conn         *grpc.ClientConn
 	ctx          context.Context
-	runelog      *runelog.Runelog
+	log          *log.Logger
 }
 
 func NewServerClient(
 	sysInfo system.SysInfo,
 	conn *grpc.ClientConn,
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) ServerClientImpl {
 	return &ServerClient{
 		sysInfo:      sysInfo,
@@ -51,22 +51,17 @@ func NewServerClient(
 		loginClient:  login.NewLoginServiceClient(conn),
 		conn:         conn,
 		ctx:          context.Background(),
-		runelog:      runelog,
+		log:          logger,
 	}
 }
 
-func (c *ServerClient) LoginNode(nk, wgPrivKey string) (*login.LoginNodeResponse, error) {
+func (c *ServerClient) LoginNode(nk, wgPubKey string) (*login.LoginNodeResponse, error) {
 	var (
 		ip   string
 		cidr string
 	)
 
-	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
-	if err != nil {
-		return nil, err
-	}
-
-	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String()})
+	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.WgPubKey: wgPubKey})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	res, err := c.loginClient.LoginNode(ctx, &emptypb.Empty{})
@@ -84,7 +79,7 @@ func (c *ServerClient) LoginNode(nk, wgPrivKey string) (*login.LoginNodeResponse
 		cidr = res.Cidr
 	}
 
-	c.runelog.Logger.Infof("runetale ip => [%s/%s]", ip, cidr)
+	c.log.Logger.Infof("runetale ip => [%s/%s]", ip, cidr)
 
 	return res, nil
 }
@@ -103,13 +98,8 @@ func (c *ServerClient) loginBySession(nk, url string) (string, string, error) {
 	return msg.Ip, msg.Cidr, nil
 }
 
-func (c *ServerClient) ComposeNode(token, nk, wgPrivKey string) (*node.ComposeNodeResponse, error) {
-	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
-	if err != nil {
-		return nil, err
-	}
-
-	md := metadata.New(map[string]string{utils.AccessToken: token, utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+func (c *ServerClient) ComposeNode(composeKey, nk, wgPubKey string) (*node.ComposeNodeResponse, error) {
+	md := metadata.New(map[string]string{utils.ComposeKey: composeKey, utils.NodeKey: nk, utils.WgPubKey: wgPubKey, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	res, err := c.nodeClient.ComposeNode(ctx, &emptypb.Empty{})
@@ -139,7 +129,7 @@ func (c *ServerClient) ConnectLoginSession(nk string) (*login.LoginSessionRespon
 	}
 
 	sessionid := getLoginSessionID(header)
-	c.runelog.Logger.Debugf("sessionid: [%s]", sessionid)
+	c.log.Logger.Debugf("sessionid: [%s]", sessionid)
 
 	for {
 		msg, err = stream.Recv()
@@ -156,13 +146,8 @@ func (c *ServerClient) ConnectLoginSession(nk string) (*login.LoginSessionRespon
 	return msg, nil
 }
 
-func (c *ServerClient) SyncRemoteNodesConfig(nk, wgPrivKey string) (*node.SyncNodesResponse, error) {
-	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
-	if err != nil {
-		return nil, err
-	}
-
-	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String()})
+func (c *ServerClient) SyncRemoteNodesConfig(nk, wgPubKey string) (*node.SyncNodesResponse, error) {
+	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.WgPubKey: wgPubKey})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	conf, err := c.nodeClient.SyncRemoteNodesConfig(ctx, &emptypb.Empty{})
@@ -203,4 +188,14 @@ func (c *ServerClient) GetConnectionStatus(nk string) (*daemon.GetConnectionStat
 		return nil, err
 	}
 	return status, nil
+}
+
+func (c *ServerClient) GetNetworkMap(nk, wgPubKey string) (*node.NetworkMapResponse, error) {
+	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.WgPubKey: wgPubKey})
+	ctx := metadata.NewOutgoingContext(c.ctx, md)
+	nmap, err := c.nodeClient.GetNetworkMap(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	return nmap, nil
 }

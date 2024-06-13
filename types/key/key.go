@@ -5,6 +5,7 @@
 package key
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -50,4 +51,32 @@ func parseHex(out []byte, in, prefix mem.RO) error {
 	}
 
 	return nil
+}
+
+type NodePublic struct {
+	k [32]byte
+}
+
+func (k NodePublic) Less(other NodePublic) bool {
+	return bytes.Compare(k.k[:], other.k[:]) < 0
+}
+
+func (k NodePublic) UntypedHexString() string {
+	return hex.EncodeToString(k.k[:])
+}
+
+func ParseNodePrivateUntyped(raw mem.RO) (NodePrivateKey, error) {
+	var ret NodePrivateKey
+	if err := parseHex(ret.privateKey[:], raw, mem.B(nil)); err != nil {
+		return NodePrivateKey{}, err
+	}
+	return ret, nil
+}
+
+func ParseNodePublicUntyped(raw mem.RO) (NodePublic, error) {
+	var ret NodePublic
+	if err := parseHex(ret.k[:], raw, mem.B(nil)); err != nil {
+		return NodePublic{}, err
+	}
+	return ret, nil
 }

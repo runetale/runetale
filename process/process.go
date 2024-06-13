@@ -4,14 +4,14 @@
 
 package process
 
-import "github.com/runetale/runetale/runelog"
+import "github.com/runetale/runetale/log"
 
 type Process interface {
 	GetRunetaledProcess() bool
 }
 
 func NewProcess(
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) Process {
-	return newProcess(runelog)
+	return newProcess(logger)
 }

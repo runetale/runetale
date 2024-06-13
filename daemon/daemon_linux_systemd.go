@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 )
 
 type systemDRecord struct {
@@ -29,14 +29,14 @@ type systemDRecord struct {
 	// daemon system config
 	systemConfig string
 
-	runelog *runelog.Runelog
+	log *log.Logger
 }
 
 // in effect, all it does is call load and start.
 func (s *systemDRecord) Install() (err error) {
 	defer func() {
 		if os.Getuid() != 0 && err != nil {
-			s.runelog.Logger.Errorf("run it again with sudo privileges: %s", err.Error())
+			s.log.Logger.Errorf("run it again with sudo privileges: %s", err.Error())
 			err = fmt.Errorf("run it again with sudo privileges: %s", err.Error())
 		}
 	}()
@@ -51,27 +51,27 @@ func (s *systemDRecord) Install() (err error) {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(s.binPath), 0755); err != nil {
-		s.runelog.Logger.Errorf("failed to create %s. because %s\n", s.binPath, err.Error())
+		s.log.Logger.Errorf("failed to create %s. because %s\n", s.binPath, err.Error())
 		return err
 	}
 
 	exePath, err := os.Executable()
 	if err != nil {
-		s.runelog.Logger.Errorf("failed to get executablePath. because %s\n", err.Error())
+		s.log.Logger.Errorf("failed to get executablePath. because %s\n", err.Error())
 		return err
 	}
 
 	tmpBin := s.binPath + ".tmp"
 	f, err := os.Create(tmpBin)
 	if err != nil {
-		s.runelog.Logger.Errorf("failed to create %s. because %s\n", tmpBin, err.Error())
+		s.log.Logger.Errorf("failed to create %s. because %s\n", tmpBin, err.Error())
 		return err
 	}
 
 	exeFile, err := os.Open(exePath)
 	if err != nil {
 		f.Close()
-		s.runelog.Logger.Errorf("failed to open %s. because %s\n", exePath, err.Error())
+		s.log.Logger.Errorf("failed to open %s. because %s\n", exePath, err.Error())
 		return err
 	}
 
@@ -79,33 +79,33 @@ func (s *systemDRecord) Install() (err error) {
 	exeFile.Close()
 	if err != nil {
 		f.Close()
-		s.runelog.Logger.Errorf("failed to copy %s to %s. because %s\n", f, exePath, err.Error())
+		s.log.Logger.Errorf("failed to copy %s to %s. because %s\n", f, exePath, err.Error())
 		return err
 	}
 
 	if err := f.Close(); err != nil {
-		s.runelog.Logger.Errorf("failed to close the %s. because %s\n", f.Name(), err.Error())
+		s.log.Logger.Errorf("failed to close the %s. because %s\n", f.Name(), err.Error())
 		return err
 	}
 
 	if err := os.Chmod(tmpBin, 0755); err != nil {
-		s.runelog.Logger.Errorf("failed to grant permission for %s. because %s\n", tmpBin, err.Error())
+		s.log.Logger.Errorf("failed to grant permission for %s. because %s\n", tmpBin, err.Error())
 		return err
 	}
 
 	if err := os.Rename(tmpBin, s.binPath); err != nil {
-		s.runelog.Logger.Errorf("failed to rename %s to %s. because %s\n", tmpBin, s.binPath, err.Error())
+		s.log.Logger.Errorf("failed to rename %s to %s. because %s\n", tmpBin, s.binPath, err.Error())
 		return err
 	}
 
-	// TODO: skip for nix
+	// todo: skip for nix
 	err = s.Uninstall()
 	if err != nil {
 		return err
 	}
 
 	if err := ioutil.WriteFile(s.daemonFilePath, []byte(s.systemConfig), 0700); err != nil {
-		s.runelog.Logger.Errorf("failed to write %s to %s. because %s\n", s.daemonFilePath, s.systemConfig, err.Error())
+		s.log.Logger.Errorf("failed to write %s to %s. because %s\n", s.daemonFilePath, s.systemConfig, err.Error())
 		return err
 	}
 
@@ -133,12 +133,12 @@ func (s *systemDRecord) Uninstall() error {
 	if isRunnning {
 		err = s.Unload()
 		if err != nil {
-			s.runelog.Logger.Errorf("failed to disable %s. path is here %s. because %s\n", s.serviceName, s.daemonFilePath, err.Error())
+			s.log.Logger.Errorf("failed to disable %s. path is here %s. because %s\n", s.serviceName, s.daemonFilePath, err.Error())
 			return err
 		}
 		err := s.Stop()
 		if err != nil {
-			s.runelog.Logger.Errorf("failed to stop %s. path is here %s. because %s\n", s.serviceName, s.daemonFilePath, err.Error())
+			s.log.Logger.Errorf("failed to stop %s. path is here %s. because %s\n", s.serviceName, s.daemonFilePath, err.Error())
 			return err
 		}
 	}

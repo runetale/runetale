@@ -5,14 +5,13 @@
 package daemon
 
 import (
+	"log"
 	"os"
-
-	"github.com/runetale/runetale/runelog"
 )
 
 func newDaemon(
 	binPath, serviceName, daemonFilePath, systemConfig string,
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) Daemon {
 	if _, err := os.Stat("/run/systemd/system"); err == nil {
 		return &systemDRecord{
@@ -21,7 +20,7 @@ func newDaemon(
 			daemonFilePath: daemonFilePath,
 			systemConfig:   systemConfig,
 
-			runelog: runelog,
+			logger: logger,
 		}
 	}
 	if _, err := os.Stat("/sbin/initctl"); err == nil {
@@ -31,7 +30,7 @@ func newDaemon(
 			daemonFilePath: daemonFilePath,
 			systemConfig:   systemConfig,
 
-			runelog: runelog,
+			logger: logger,
 		}
 	}
 
@@ -41,6 +40,6 @@ func newDaemon(
 		daemonFilePath: daemonFilePath,
 		systemConfig:   systemConfig,
 
-		runelog: runelog,
+		logger: logger,
 	}
 }

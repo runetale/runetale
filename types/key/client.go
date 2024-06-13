@@ -5,10 +5,12 @@
 package key
 
 import (
-	"go4.org/mem"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+	"crypto/subtle"
+	"encoding/hex"
 
 	"github.com/runetale/runetale/types/structs"
+	"go4.org/mem"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 const (
@@ -16,36 +18,44 @@ const (
 	clientPublicKeyPrefix  = "public_client_key:"
 )
 
-type RunetaleClientPrivateState struct {
+type NodePrivateKey struct {
 	_          structs.Incomparable
 	privateKey wgtypes.Key
 }
 
-func NewClientPrivateKey() (RunetaleClientPrivateState, error) {
+func NewClientPrivateKey() (NodePrivateKey, error) {
 	k, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
-		return RunetaleClientPrivateState{}, err
+		return NodePrivateKey{}, err
 	}
 
-	return RunetaleClientPrivateState{
+	return NodePrivateKey{
 		privateKey: k,
 	}, nil
 }
 
-func (s RunetaleClientPrivateState) MarshalText() ([]byte, error) {
-	return toHex(s.privateKey[:], clientPrivateKeyPrefix), nil
+func (k NodePrivateKey) MarshalText() ([]byte, error) {
+	return toHex(k.privateKey[:], clientPrivateKeyPrefix), nil
 }
 
-func (s *RunetaleClientPrivateState) UnmarshalText(b []byte) error {
-	return parseHex(s.privateKey[:], mem.B(b), mem.S(clientPrivateKeyPrefix))
+func (k *NodePrivateKey) UnmarshalText(b []byte) error {
+	return parseHex(k.privateKey[:], mem.B(b), mem.S(clientPrivateKeyPrefix))
 }
 
-func (s RunetaleClientPrivateState) PublicKey() string {
-	pkey := s.privateKey.PublicKey().String()
+func (k NodePrivateKey) PublicKey() string {
+	pkey := k.privateKey.PublicKey().String()
 	return pkey
 }
 
-func (s RunetaleClientPrivateState) PrivateKey() string {
-	pkey := s.privateKey.String()
+func (k NodePrivateKey) PrivateKey() string {
+	pkey := k.privateKey.String()
 	return pkey
+}
+
+func (k NodePrivateKey) Equal(other NodePrivateKey) bool {
+	return subtle.ConstantTimeCompare(k.privateKey[:], other.privateKey[:]) == 1
+}
+
+func (k NodePrivateKey) UntypedHexString() string {
+	return hex.EncodeToString(k.privateKey[:])
 }

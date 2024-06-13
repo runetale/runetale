@@ -6,14 +6,15 @@ package iface
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"net/netip"
 	"time"
 
-	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
-	"golang.zx2c4.com/wireguard/tun"
+	"golang.zx2c4.com/wireguard/tun/netstack"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -28,12 +29,12 @@ type Iface struct {
 	// your cidr range
 	CIDR string
 
-	runelog *runelog.Runelog
+	logger *log.Logger
 }
 
 func NewIface(
 	tun, wgPrivateKey, ip string,
-	cidr string, runelog *runelog.Runelog,
+	cidr string, logger *log.Logger,
 ) *Iface {
 	return &Iface{
 		Tun:          tun,
@@ -41,32 +42,33 @@ func NewIface(
 		IP:           ip,
 		CIDR:         cidr,
 
-		runelog: runelog,
+		logger: logger,
 	}
 }
 
 func (i *Iface) ConfigureRemoteNodePeer(
-	remoteNodePubKey, remoteip string,
-	endpoint *net.UDPAddr,
+	remoteNodePubKey string,
+	remoteip string,
+	endpoint *net.UDPAddr, //iceから受け取ったエンドポイント
 	keepAlive time.Duration,
 	preSharedKey string,
 ) error {
-	i.runelog.Logger.Debugf(
-		"configuring %s to remote node [%s:%s], remote endpoint [%s:%d]",
-		i.Tun, remoteNodePubKey, remoteip, endpoint.IP.String(), endpoint.Port,
-	)
+	// i.logger.Debugf(
+	// 	"configuring %s to remote node [%s:%s], remote endpoint [%s:%d]",
+	// 	i.Tun, remoteNodePubKey, remoteip, endpoint.IP.String(), endpoint.Port,
+	// )
 
 	_, ipNet, err := net.ParseCIDR(remoteip)
 	if err != nil {
-		i.runelog.Logger.Errorf("failed to parse cidr")
+		// i.log.log.Errorf("failed to parse cidr")
 		return err
 	}
 
-	i.runelog.Logger.Debugf("allowed remote ip [%s]", ipNet.IP.String())
+	// i.log.log.Debugf("allowed remote ip [%s]", ipNet.IP.String())
 
 	parsedRemoteNodePubKey, err := wgtypes.ParseKey(remoteNodePubKey)
 	if err != nil {
-		i.runelog.Logger.Errorf("failed to remote node pub key")
+		// i.log.log.Errorf("failed to remote node pub key")
 		return err
 	}
 
@@ -74,7 +76,7 @@ func (i *Iface) ConfigureRemoteNodePeer(
 	if preSharedKey != "" {
 		parsedPreSharedkey, err = wgtypes.ParseKey(preSharedKey)
 		if err != nil {
-			i.runelog.Logger.Errorf("failed to wg preshared key")
+			// i.log.log.Errorf("failed to wg preshared key")
 			return err
 		}
 	}
@@ -85,7 +87,12 @@ func (i *Iface) ConfigureRemoteNodePeer(
 		AllowedIPs:                  []net.IPNet{*ipNet},
 		PersistentKeepaliveInterval: &keepAlive,
 		PresharedKey:                &parsedPreSharedkey,
-		Endpoint:                    endpoint,
+
+		// proxyを使う場合はこのNodeのlocalのIPを使用する
+		// udpAddr, err := net.ResolveUDPAddr(w.localConn.LocalAddr().Network(), w.localConn.LocalAddr().String())
+		// 使わない場合はremoteのアドレスを入れておく
+		// udpAddr, err := net.ResolveUDPAddr("udp", w.remoteConn.RemoteAddr().String())
+		Endpoint: endpoint,
 	}
 
 	config := wgtypes.Config{
@@ -94,7 +101,7 @@ func (i *Iface) ConfigureRemoteNodePeer(
 
 	err = i.configureDevice(config)
 	if err != nil {
-		i.runelog.Logger.Errorf("failed to configure device")
+		// i.log.log.Errorf("failed to configure device")
 		return err
 	}
 
@@ -104,14 +111,14 @@ func (i *Iface) ConfigureRemoteNodePeer(
 func (i *Iface) configureDevice(config wgtypes.Config) error {
 	wg, err := wgctrl.New()
 	if err != nil {
-		i.runelog.Logger.Errorf("failed to wgctl")
+		// i.log.log.Errorf("failed to wgctl")
 		return err
 	}
 	defer wg.Close()
 
 	_, err = wg.Device(i.Tun)
 	if err != nil {
-		i.runelog.Logger.Errorf("failed to wgdevice [%s], %s", i.Tun, err.Error())
+		// i.log.log.Errorf("failed to wgdevice [%s], %s", i.Tun, err.Error())
 		return err
 	}
 
@@ -119,7 +126,7 @@ func (i *Iface) configureDevice(config wgtypes.Config) error {
 }
 
 func (i *Iface) RemoveRemotePeer(iface string, remoteip, remotePeerPubKey string) error {
-	i.runelog.Logger.Debugf("delete %s on %s", remotePeerPubKey, i.Tun)
+	// i.log.log.Debugf("delete %s on %s", remotePeerPubKey, i.Tun)
 
 	peerKeyParsed, err := wgtypes.ParseKey(remotePeerPubKey)
 	if err != nil {
@@ -139,7 +146,15 @@ func (i *Iface) RemoveRemotePeer(iface string, remoteip, remotePeerPubKey string
 }
 
 func (i *Iface) CreateWithUserSpace(address string) error {
-	tunIface, err := tun.CreateTUN(i.Tun, wg.DefaultMTU)
+	// proxy
+	// listenAddr := "0.0.0.0:2000"
+
+	ip, _, err := net.ParseCIDR(address)
+	tunIface, _, err := netstack.CreateNetTUN(
+		[]netip.Addr{netip.MustParseAddr(ip.String())},
+		[]netip.Addr{},
+		wg.DefaultMTU,
+	)
 	if err != nil {
 		return err
 	}

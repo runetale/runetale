@@ -18,23 +18,29 @@ import (
 	"github.com/runetale/runetale/conf"
 	"github.com/runetale/runetale/daemon"
 	dd "github.com/runetale/runetale/daemon/runetaled"
-	"github.com/runetale/runetale/engine"
+	"github.com/runetale/runetale/log"
+	"github.com/runetale/runetale/net/rntun"
+	"github.com/runetale/runetale/net/runedial"
 	"github.com/runetale/runetale/paths"
 	"github.com/runetale/runetale/process"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/rnengine"
+	"github.com/runetale/runetale/rnengine/router"
+	"github.com/runetale/runetale/rsystemd"
 	"github.com/runetale/runetale/types/flagtype"
+	"github.com/runetale/runetale/utils/ports"
+	"github.com/runetale/runetale/wg"
 )
 
 var upArgs struct {
-	clientPath  string
-	accessToken string
-	serverHost  string
-	serverPort  int64
-	signalHost  string
-	signalPort  int64
-	logFile     string
-	logLevel    string
-	debug       bool
+	clientPath string
+	composeKey string
+	serverHost string
+	serverPort int64
+	signalHost string
+	signalPort int64
+	logFile    string
+	logLevel   string
+	debug      bool
 }
 
 var upCmd = &ffcli.Command{
@@ -45,12 +51,12 @@ var upCmd = &ffcli.Command{
 		fs := flag.NewFlagSet("up", flag.ExitOnError)
 		fs.StringVar(&upArgs.clientPath, "path", paths.DefaultClientConfigFile(), "client default config file")
 		fs.StringVar(&upArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "server host")
-		fs.StringVar(&upArgs.accessToken, "access-token", "", "launch node with access token")
+		fs.StringVar(&upArgs.composeKey, "compose-key", "", "launch node with access token")
 		fs.Int64Var(&upArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
 		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
 		fs.StringVar(&upArgs.logFile, "logfile", paths.DefaultClientLogFile(), "set logfile path")
-		fs.StringVar(&upArgs.logLevel, "loglevel", runelog.DebugLevelStr, "set log level")
+		fs.StringVar(&upArgs.logLevel, "loglevel", log.DebugLevelStr, "set log level")
 		fs.BoolVar(&upArgs.debug, "debug", false, "is debug")
 		return fs
 	})(),
@@ -60,7 +66,7 @@ var upCmd = &ffcli.Command{
 // after login, check to see if the runetaled daemon is up.
 // if not, prompt the user to start it.
 func execUp(ctx context.Context, args []string) error {
-	runelog, err := runelog.NewRunelog("runetale up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
+	logger, err := log.NewLogger("runetale up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v", err)
 		return nil
@@ -77,37 +83,47 @@ func execUp(ctx context.Context, args []string) error {
 		uint(upArgs.serverPort),
 		upArgs.signalHost,
 		uint(upArgs.signalPort),
-		runelog,
+		logger,
 	)
 	if err != nil {
 		fmt.Printf("failed to create client conf, because %s\n", err.Error())
 		return err
 	}
 
-	if !isInstallRunetaledDaemon(runelog) && !isRunningRunetaledProcess(runelog) {
-		runelog.Logger.Warnf("you need to activate runetaled. execute this command 'runetaled up'")
-		return nil
+	// if !isInstallRunetaledDaemon(logger) && !isRunningRunetaledProcess(logger) {
+	// 	logger.Logger.Warnf("you need to activate runetaled. execute this command 'runetaled up'")
+	// 	return nil
+	// }
+
+	wgPubkey, err := c.ClientConfig.GetWgPublicKey()
+	if err != nil {
+		fmt.Printf("cannot get wg pubkey, because %s\n", err.Error())
+		return err
 	}
 
-	ip, cidr, err := loginNode(upArgs.accessToken, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(upArgs.composeKey, c.NodePubKey, wgPubkey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err
 	}
+	fmt.Println(ip)
+	fmt.Println(cidr)
 
-	err = upEngine(
-		ctx,
-		c.ServerClient,
-		runelog,
-		c.Spec.TunName,
-		c.NodePubKey,
-		ip,
-		cidr,
-		c.Spec.WgPrivateKey,
-		c.Spec.BlackList,
-	)
+	port, err := ports.GetFreePort(0)
 	if err != nil {
-		runelog.Logger.Warnf("failed to start engine. because %v", err)
+		return err
+	}
+	if port != wg.DefaultWgPort {
+		fmt.Printf("using %d as wireguard port: %d is in use", port, wg.DefaultWgPort)
+		return err
+	}
+
+	sys := new(rsystemd.System)
+	err = createEngine(
+		sys, c.ClientConfig.TunName, c.ClientConfig.BlackList, logger, c.SignalClient, c.ServerClient,
+		c.NodePubKey, port, c.ClientConfig)
+	if err != nil {
+		fmt.Printf("failed to create Engine %s\n", err.Error())
 		return err
 	}
 
@@ -131,68 +147,106 @@ func execUp(ctx context.Context, args []string) error {
 	return nil
 }
 
-func loginNode(accessToken, nk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
-	if accessToken != "" {
-		res, err := client.ComposeNode(accessToken, nk, wgPrivKey)
+func loginNode(composeKey, nk, wgPubKey string, client grpc_client.ServerClientImpl) (string, string, error) {
+	if composeKey != "" {
+		res, err := client.ComposeNode(composeKey, nk, wgPubKey)
 		if err != nil {
 			return "", "", err
 		}
 		return res.GetIp(), res.GetCidr(), nil
 	}
 
-	res, err := client.LoginNode(nk, wgPrivKey)
+	res, err := client.LoginNode(nk, wgPubKey)
 	if err != nil {
 		return "", "", err
 	}
 	return res.GetIp(), res.GetCidr(), nil
 }
 
-func upEngine(
-	ctx context.Context,
-	serverClient grpc_client.ServerClientImpl,
-	runelog *runelog.Runelog,
-	tunName string,
-	mPubKey string,
-	ip string,
-	cidr string,
-	wgPrivKey string,
-	blackList []string,
-) error {
-	pctx, cancel := context.WithCancel(ctx)
-
-	engine, err := engine.NewEngine(
-		serverClient,
-		runelog,
-		tunName,
-		mPubKey,
-		ip,
-		cidr,
-		wgPrivKey,
-		blackList,
-		pctx,
-		cancel,
-	)
-	if err != nil {
-		runelog.Logger.Warnf("failed to connect signal client. because %v", err)
-		return err
-	}
-
-	err = engine.Start()
-	if err != nil {
-		runelog.Logger.Warnf("failed to start engine. because %v", err)
-		return err
-	}
-
-	return nil
-}
-
-func isInstallRunetaledDaemon(runelog *runelog.Runelog) bool {
-	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, runelog)
+func isInstallRunetaledDaemon(logger *log.Logger) bool {
+	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, logger)
 	_, isInstalled := d.Status()
 	return isInstalled
 }
 
-func isRunningRunetaledProcess(runelog *runelog.Runelog) bool {
-	p := process.NewProcess(runelog)
+func isRunningRunetaledProcess(logger *log.Logger) bool {
+	p := process.NewProcess(logger)
 	return p.GetRunetaledProcess()
+}
+
+func newLocalBackend() {
+	// create userspaceEngine
+	// create netstack
+	// create local api server
+}
+
+func createEngine(sys *rsystemd.System, tunName string, blackList []string, log *log.Logger,
+	signalClient grpc_client.SignalClientImpl,
+	serverClient grpc_client.ServerClientImpl,
+	nodeKey string,
+	wgPort uint16,
+	clientConfig *conf.ClientConfig,
+) (err error) {
+	err = tryEngine(log, false, tunName, blackList, sys, signalClient, serverClient, nodeKey, wgPort, clientConfig)
+	return
+}
+
+func tryEngine(log *log.Logger, isNetStack bool, tunName string,
+	blackList []string, sys *rsystemd.System,
+	signalClient grpc_client.SignalClientImpl,
+	serverClient grpc_client.ServerClientImpl,
+	nodeKey string,
+	wgPort uint16,
+	clientConfig *conf.ClientConfig,
+) error {
+	// set dialier for netstack
+	// todo (snt) dnsのhttps outbound通信を行うために
+	// dialerをserveするserverを作る
+	dialer := &runedial.Dialer{Logger: log}
+	conf := rnengine.Config{
+		Dialer: dialer,
+	}
+	sys.Set(dialer)
+
+	// set tun
+	dev, devName, err := rntun.New(log, tunName)
+	if err != nil {
+		rntun.Diagnose(log, tunName, err)
+		return fmt.Errorf("rntun.New(%q): %w", tunName, err)
+	}
+	conf.Tun = dev
+	log.Logger.Debugf("created tun device: %s", devName)
+
+	// set router
+	r, err := router.New(dev, log)
+	if err != nil {
+		dev.Close()
+		return err
+	}
+	conf.Router = r
+	sys.Set(conf.Router)
+
+	// set IfaceBlacklist
+	conf.IfaceBlackList = blackList
+
+	// set signal and server
+	conf.ServerClient = serverClient
+	conf.SignalClient = signalClient
+
+	// set nodekey
+	conf.NodeKey = nodeKey
+
+	// set client config
+	conf.ClientConfig = clientConfig
+
+	// set client config
+	conf.WgListenPort = wgPort
+
+	engine, err := rnengine.NewUserspaceEngine(log, conf)
+	if err != nil {
+		return err
+	}
+	sys.Set(engine)
+
+	return nil
 }
