@@ -148,6 +148,12 @@ func (c *ControlPlane) receiveSignalRequest(
 			return err
 		}
 		dstNode.SendRemoteCandidate(candidate)
+	case negotiation.NegotiationType_JOIN:
+		err := c.offerToRemotePeer()
+		if err != nil {
+			c.runelog.Logger.Errorf("failed to sync remote nodes")
+			return err
+		}
 	}
 
 	return nil
@@ -193,7 +199,7 @@ func (c *ControlPlane) ConnectSignalServer() {
 }
 
 // keep the latest state of Peers received from the server
-func (c *ControlPlane) syncRemotePeerConfig(remotePeers []*node.Node) error {
+func (c *ControlPlane) syncRemoteNode(remotePeers []*node.Node) error {
 	remotePeerMap := make(map[string]struct{})
 	for _, p := range remotePeers {
 		remotePeerMap[p.GetRemoteNodeKey()] = struct{}{}
@@ -219,7 +225,7 @@ func (c *ControlPlane) syncRemotePeerConfig(remotePeers []*node.Node) error {
 		c.runelog.Logger.Debugf("there are no peers, even though there should be")
 	}
 
-	c.runelog.Logger.Debugf("completed peersConn delete in signal control plane => %v", unnecessary)
+	c.runelog.Logger.Debugf("completed nodes delete in control plane => %v", unnecessary)
 	return nil
 }
 
@@ -345,6 +351,49 @@ func (c *ControlPlane) SyncRemoteNodes() error {
 	return nil
 }
 
+func (c *ControlPlane) offerToRemotePeer() error {
+	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
+	operation := func() error {
+
+		res, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
+		if err != nil {
+			return err
+		}
+
+		if res.GetRemoteNodes() == nil {
+			return nil
+		}
+
+		err = c.syncRemoteNode(res.GetRemoteNodes())
+		if err != nil {
+			return err
+		}
+
+		for _, remoteNode := range res.GetRemoteNodes() {
+			i, err := c.newIce(remoteNode, res.Ip, res.Cidr)
+			if err != nil {
+				return err
+			}
+
+			c.peerConns[remoteNode.GetRemoteNodeKey()] = i
+			c.waitForRemoteConnCh <- i
+		}
+
+		return nil
+	}
+
+	if err := backoff.Retry(operation, b); err != nil {
+		return err
+	}
+	return nil
+}
+
+// join.
+// *local nodeは新しく参加したnode
+// 1. syncRemoteNodeで取得したnodeに対してnew nodeはjoinを叩く
+// 2. remote nodeのreceiveSignal Requestでjoinが呼ばれて、syncRemoteNodeConfigを実行して、peerConnsをnew nodeを含む最新の状態にする
+// 3. remote nodeが new nodeにsignal offerを送る。
+// 4. new nodeはofferを受け取り、remote nodeにanswerを返す。
 func (c *ControlPlane) JoinRuneNetwork() error {
 	for remoteNodeKey := range c.peerConns {
 		err := c.signalClient.Join(remoteNodeKey, c.nk)
@@ -352,6 +401,5 @@ func (c *ControlPlane) JoinRuneNetwork() error {
 			return err
 		}
 	}
-
 	return nil
 }
