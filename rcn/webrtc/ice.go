@@ -323,7 +323,7 @@ func (i *Ice) StartGatheringProcess() error {
 	operation := func() error {
 		err := i.signalOffer()
 		if err != nil {
-			i.runelog.Logger.Debugf("failed to signal offer, because %s", err.Error())
+			i.runelog.Logger.Debugf("retrying signal offer")
 			return err
 		}
 		return nil
