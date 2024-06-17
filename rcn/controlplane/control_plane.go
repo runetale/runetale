@@ -136,11 +136,11 @@ func (c *ControlPlane) receiveSignalRequest(
 	pwd string,
 	candidate string,
 ) error {
+	dstNode.WaitingRemotePeerConnections()
 	switch msgType {
 	case negotiation.NegotiationType_ANSWER:
 		dstNode.SendRemoteAnswerCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_OFFER:
-		dstNode.WaitingRemotePeerConnections()
 		dstNode.SendRemoteOfferCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_CANDIDATE:
 		candidate, err := ice.UnmarshalCandidate(candidate)
