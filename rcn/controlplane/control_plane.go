@@ -10,6 +10,8 @@ package controlplane
 //
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -167,8 +169,10 @@ func (c *ControlPlane) ConnectSignalServer() {
 					return err
 				}
 
+				fmt.Println(nodes.GetRemoteNodes())
+
 				if nodes.GetRemoteNodes() == nil {
-					return nil
+					return errors.New("aa")
 				}
 
 				for _, rp := range nodes.GetRemoteNodes() {
@@ -211,11 +215,11 @@ func (c *ControlPlane) ConnectSignalServer() {
 
 	c.signalClient.WaitStartConnect()
 
-	// err := c.initialOfferToRemotePeer()
-	// if err != nil {
-	// 	close(c.ch)
-	// 	return
-	// }
+	err := c.initialOfferToRemotePeer()
+	if err != nil {
+		close(c.ch)
+		return
+	}
 }
 
 func (c *ControlPlane) initialOfferToRemotePeer() error {
