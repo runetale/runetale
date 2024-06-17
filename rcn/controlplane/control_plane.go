@@ -161,7 +161,27 @@ func (c *ControlPlane) ConnectSignalServer() {
 				c.mu.Lock()
 				defer c.mu.Unlock()
 
-				err := c.receiveSignalRequest(
+				// update peer map
+				nodes, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
+				if err != nil {
+					return err
+				}
+
+				if nodes.GetRemoteNodes() == nil {
+					return nil
+				}
+
+				for _, rp := range nodes.GetRemoteNodes() {
+					i, err := c.newIce(rp, nodes.Ip, nodes.Cidr)
+					if err != nil {
+						return err
+					}
+
+					c.peerConns[rp.RemoteNodeKey] = i
+					c.waitForRemoteConnCh <- i
+				}
+
+				err = c.receiveSignalRequest(
 					res.GetDstNodeKey(),
 					res.GetType(),
 					c.peerConns[res.GetDstNodeKey()],
@@ -191,11 +211,11 @@ func (c *ControlPlane) ConnectSignalServer() {
 
 	c.signalClient.WaitStartConnect()
 
-	err := c.initialOfferToRemotePeer()
-	if err != nil {
-		close(c.ch)
-		return
-	}
+	// err := c.initialOfferToRemotePeer()
+	// if err != nil {
+	// 	close(c.ch)
+	// 	return
+	// }
 }
 
 func (c *ControlPlane) initialOfferToRemotePeer() error {
