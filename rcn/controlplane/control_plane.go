@@ -346,6 +346,7 @@ func (c *ControlPlane) SyncRemoteNodes() error {
 			return err
 		}
 		c.peerConns[remoteNode.GetRemoteNodeKey()] = i
+		c.waitForRemoteConnCh <- i
 	}
 
 	return nil
