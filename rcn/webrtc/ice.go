@@ -136,7 +136,7 @@ func NewIce(
 	}
 }
 
-// must be called before calling ConfigureGatherProcess
+// must be called before calling NewIce
 func (i *Ice) Setup() (err error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()

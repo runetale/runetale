@@ -10,8 +10,6 @@ package controlplane
 //
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -163,29 +161,7 @@ func (c *ControlPlane) ConnectSignalServer() {
 				c.mu.Lock()
 				defer c.mu.Unlock()
 
-				// update peer map
-				nodes, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
-				if err != nil {
-					return err
-				}
-
-				fmt.Println(nodes.GetRemoteNodes())
-
-				if nodes.GetRemoteNodes() == nil {
-					return errors.New("aa")
-				}
-
-				for _, rp := range nodes.GetRemoteNodes() {
-					i, err := c.newIce(rp, nodes.Ip, nodes.Cidr)
-					if err != nil {
-						return err
-					}
-
-					c.peerConns[rp.RemoteNodeKey] = i
-					c.waitForRemoteConnCh <- i
-				}
-
-				err = c.receiveSignalRequest(
+				err := c.receiveSignalRequest(
 					res.GetDstNodeKey(),
 					res.GetType(),
 					c.peerConns[res.GetDstNodeKey()],
