@@ -388,18 +388,22 @@ func (c *ControlPlane) offerToRemotePeer() error {
 	return nil
 }
 
-// join.
-// *local nodeは新しく参加したnode
-// 1. syncRemoteNodeで取得したnodeに対してnew nodeはjoinを叩く
-// 2. remote nodeのreceiveSignal Requestでjoinが呼ばれて、syncRemoteNodeConfigを実行して、peerConnsをnew nodeを含む最新の状態にする
-// 3. remote nodeが new nodeにsignal offerを送る。
-// 4. new nodeはofferを受け取り、remote nodeにanswerを返す。
 func (c *ControlPlane) JoinRuneNetwork() error {
-	for remoteNodeKey := range c.peerConns {
-		err := c.signalClient.Join(remoteNodeKey, c.nk)
-		if err != nil {
-			return err
+	go func() {
+		b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
+		operation := func() error {
+			for remoteNodeKey := range c.peerConns {
+				err := c.signalClient.Join(remoteNodeKey, c.nk)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		}
-	}
+		if err := backoff.Retry(operation, b); err != nil {
+			close(c.ch)
+			return
+		}
+	}()
 	return nil
 }

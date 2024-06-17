@@ -94,7 +94,6 @@ func (r *Rcn) Start() {
 
 	go r.cp.WaitForRemoteConn()
 
-	// join
 	err = r.cp.JoinRuneNetwork()
 	if err != nil {
 		r.runelog.Logger.Errorf("failed to join network, %s", err.Error())
