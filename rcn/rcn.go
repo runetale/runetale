@@ -78,6 +78,8 @@ func (r *Rcn) Setup(ip, cidr string) error {
 }
 
 func (r *Rcn) Start() {
+	go r.cp.WaitForRemoteConn()
+
 	err := r.cp.ConfigureStunTurnConf()
 	if err != nil {
 		r.runelog.Logger.Errorf("failed to set up relay server, %s", err.Error())
@@ -91,8 +93,6 @@ func (r *Rcn) Start() {
 	}
 
 	go r.cp.ConnectSignalServer()
-
-	go r.cp.WaitForRemoteConn()
 
 	err = r.cp.JoinRuneNetwork()
 	if err != nil {
