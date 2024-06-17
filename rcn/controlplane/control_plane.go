@@ -10,6 +10,7 @@ package controlplane
 //
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -346,6 +347,7 @@ func (c *ControlPlane) SyncRemoteNodes() error {
 			return err
 		}
 		c.peerConns[remoteNode.GetRemoteNodeKey()] = i
+		fmt.Println(remoteNode.GetRemoteNodeKey())
 	}
 
 	return nil
