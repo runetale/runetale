@@ -71,11 +71,13 @@ func execLogin(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	_, _, err = loginNode(loginArgs.composeKey, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(loginArgs.composeKey, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err
 	}
+
+	runelog.Logger.Debugf("runetale ip => [%s/%s]", ip, cidr)
 
 	return nil
 }
