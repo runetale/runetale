@@ -355,7 +355,6 @@ func (c *ControlPlane) SyncRemoteNodes() error {
 func (c *ControlPlane) offerToRemotePeer() error {
 	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
 	operation := func() error {
-
 		res, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
 		if err != nil {
 			return err

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pion/ice/v2"
+	"github.com/runetale/runetale/backoff"
 	"github.com/runetale/runetale/client/grpc"
 	"github.com/runetale/runetale/iface"
 	"github.com/runetale/runetale/rcn/conn"
@@ -318,9 +319,17 @@ func (i *Ice) StartGatheringProcess() error {
 	// as it requires waiting for a connection channel from the other peers
 	go i.WaitingRemotePeerConnections()
 
-	err := i.signalOffer()
-	if err != nil {
-		i.runelog.Logger.Errorf("failed to signal offer, because %s", err.Error())
+	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
+	operation := func() error {
+		err := i.signalOffer()
+		if err != nil {
+			i.runelog.Logger.Errorf("failed to signal offer, because %s", err.Error())
+			return err
+		}
+		return nil
+	}
+
+	if err := backoff.Retry(operation, b); err != nil {
 		return err
 	}
 
@@ -394,7 +403,7 @@ func (i *Ice) WaitingRemotePeerConnections() error {
 			i.runelog.Logger.Infof("receive offer from [%s]", i.remoteNodeKey)
 			err := i.signalAnswer()
 			if err != nil {
-				i.runelog.Logger.Errorf("failed to signal offer, %s", err.Error())
+				i.runelog.Logger.Errorf("failed to signal answer, %s", err.Error())
 				return err
 			}
 			// return nil
