@@ -144,6 +144,7 @@ func (c *ControlPlane) receiveSignalRequest(
 		fmt.Println(remotenk)
 		fmt.Println(uname)
 		fmt.Println(pwd)
+		fmt.Println(dstNode)
 		dstNode.SendRemoteOfferCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_CANDIDATE:
 		candidate, err := ice.UnmarshalCandidate(candidate)
@@ -170,6 +171,9 @@ func (c *ControlPlane) ConnectSignalServer() {
 			err := c.signalClient.Connect(c.nk, func(res *negotiation.NegotiationRequest) error {
 				c.mu.Lock()
 				defer c.mu.Unlock()
+
+				fmt.Println("peer conns")
+				fmt.Println(c.peerConns)
 
 				err := c.receiveSignalRequest(
 					res.GetDstNodeKey(),
