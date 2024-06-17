@@ -239,7 +239,7 @@ func (w *WireProxy) monRemoteToLocalProxy() {
 	for {
 		select {
 		case <-w.ctx.Done():
-			w.runelog.Logger.Errorf("close the local proxy. close the remote ip here [%s], ", w.remoteIp)
+			w.runelog.Logger.Debugf("close the local proxy. close the remote ip => [%s], ", w.remoteIp)
 			return
 		default:
 			n, err := w.remoteConn.Read(buf)
