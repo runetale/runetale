@@ -10,7 +10,6 @@ package controlplane
 //
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 
@@ -141,10 +140,7 @@ func (c *ControlPlane) receiveSignalRequest(
 	case negotiation.NegotiationType_ANSWER:
 		dstNode.SendRemoteAnswerCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_OFFER:
-		fmt.Println(remotenk)
-		fmt.Println(uname)
-		fmt.Println(pwd)
-		fmt.Println(dstNode)
+		dstNode.WaitingRemotePeerConnections()
 		dstNode.SendRemoteOfferCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_CANDIDATE:
 		candidate, err := ice.UnmarshalCandidate(candidate)

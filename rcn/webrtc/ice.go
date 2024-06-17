@@ -316,7 +316,7 @@ func (i *Ice) getLocalUserIceAgentCredentials() (string, string, error) {
 func (i *Ice) StartGatheringProcess() error {
 	// must be done asynchronously, separately from SignalOffer,
 	// as it requires waiting for a connection channel from the other peers
-	go i.waitingRemotePeerConnections()
+	go i.WaitingRemotePeerConnections()
 
 	err := i.signalOffer()
 	if err != nil {
@@ -384,7 +384,7 @@ func (i *Ice) CloseIce() error {
 
 // when the offer and answer come in, gather the agent's candidates and collect the process.
 // then if there are no errors, go establish a connection
-func (i *Ice) waitingRemotePeerConnections() error {
+func (i *Ice) WaitingRemotePeerConnections() error {
 	var credentials Credentials
 	for {
 		select {
