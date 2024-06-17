@@ -87,6 +87,8 @@ func (r *Rcn) Start() {
 
 	go r.cp.ConnectSock(r.iface.IP, r.iface.CIDR)
 
+	go r.cp.SyncRemoteNodes()
+
 	r.systemMonitor()
 
 	r.runelog.Logger.Debugf("started rcn")
