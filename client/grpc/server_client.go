@@ -21,7 +21,7 @@ import (
 
 type ServerClientImpl interface {
 	LoginNode(nk, wgPrivKey string) (*login.LoginNodeResponse, error)
-	ComposeNode(token, nk, wgPrivKey string) (*node.ComposeNodeResponse, error)
+	ComposeNode(composeKey, nk, wgPrivKey string) (*node.ComposeNodeResponse, error)
 	SyncRemoteNodesConfig(nk, wgPrivKey string) (*node.SyncNodesResponse, error)
 	ConnectLoginSession(nk string) (*login.LoginSessionResponse, error)
 	Connect(nk string) (*daemon.GetConnectionStatusResponse, error)
@@ -103,13 +103,13 @@ func (c *ServerClient) loginBySession(nk, url string) (string, string, error) {
 	return msg.Ip, msg.Cidr, nil
 }
 
-func (c *ServerClient) ComposeNode(token, nk, wgPrivKey string) (*node.ComposeNodeResponse, error) {
+func (c *ServerClient) ComposeNode(composeKey, nk, wgPrivKey string) (*node.ComposeNodeResponse, error) {
 	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
 	if err != nil {
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.AccessToken: token, utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	md := metadata.New(map[string]string{utils.ComposeKey: composeKey, utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	res, err := c.nodeClient.ComposeNode(ctx, &emptypb.Empty{})

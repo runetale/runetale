@@ -5,9 +5,9 @@
 package utils
 
 const (
-	NodeKey     = "node-key"
-	OS          = "os"
-	HostName    = "hostname"
-	WgPubKey    = "wg-pub-key"
-	AccessToken = "access-token"
+	NodeKey    = "node-key"
+	OS         = "os"
+	HostName   = "hostname"
+	WgPubKey   = "wg-pub-key"
+	ComposeKey = "compose-key"
 )

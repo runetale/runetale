@@ -26,15 +26,15 @@ import (
 )
 
 var upArgs struct {
-	clientPath  string
-	accessToken string
-	serverHost  string
-	serverPort  int64
-	signalHost  string
-	signalPort  int64
-	logFile     string
-	logLevel    string
-	debug       bool
+	clientPath string
+	composeKey string
+	serverHost string
+	serverPort int64
+	signalHost string
+	signalPort int64
+	logFile    string
+	logLevel   string
+	debug      bool
 }
 
 var upCmd = &ffcli.Command{
@@ -45,7 +45,7 @@ var upCmd = &ffcli.Command{
 		fs := flag.NewFlagSet("up", flag.ExitOnError)
 		fs.StringVar(&upArgs.clientPath, "path", paths.DefaultClientConfigFile(), "client default config file")
 		fs.StringVar(&upArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "server host")
-		fs.StringVar(&upArgs.accessToken, "access-token", "", "launch node with access token")
+		fs.StringVar(&upArgs.composeKey, "compose-key", "", "launch node with access token")
 		fs.Int64Var(&upArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
 		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
@@ -89,7 +89,7 @@ func execUp(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	ip, cidr, err := loginNode(upArgs.accessToken, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(upArgs.composeKey, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err
@@ -131,9 +131,9 @@ func execUp(ctx context.Context, args []string) error {
 	return nil
 }
 
-func loginNode(accessToken, nk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
-	if accessToken != "" {
-		res, err := client.ComposeNode(accessToken, nk, wgPrivKey)
+func loginNode(composeKey, nk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
+	if composeKey != "" {
+		res, err := client.ComposeNode(composeKey, nk, wgPrivKey)
 		if err != nil {
 			return "", "", err
 		}
