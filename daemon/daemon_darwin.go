@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -116,7 +115,7 @@ func (d *daemon) Install() (err error) {
 		return err
 	}
 
-	if err := ioutil.WriteFile(d.daemonFilePath, []byte(d.systemConfig), 0755); err != nil {
+	if err := os.WriteFile(d.daemonFilePath, []byte(d.systemConfig), 0755); err != nil {
 		d.runelog.Logger.Errorf("failed to write %s to %s. because %s\n", d.daemonFilePath, d.systemConfig, err.Error())
 		return err
 	}
