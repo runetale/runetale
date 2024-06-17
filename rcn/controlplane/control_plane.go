@@ -131,23 +131,23 @@ func (c *ControlPlane) ConfigureStunTurnConf() error {
 func (c *ControlPlane) receiveSignalRequest(
 	remotenk string,
 	msgType negotiation.NegotiationType,
-	node *webrtc.Ice,
+	dstNode *webrtc.Ice,
 	uname string,
 	pwd string,
 	candidate string,
 ) error {
 	switch msgType {
 	case negotiation.NegotiationType_ANSWER:
-		node.SendRemoteAnswerCh(remotenk, uname, pwd)
+		dstNode.SendRemoteAnswerCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_OFFER:
-		node.SendRemoteOfferCh(remotenk, uname, pwd)
+		dstNode.SendRemoteOfferCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_CANDIDATE:
 		candidate, err := ice.UnmarshalCandidate(candidate)
 		if err != nil {
 			c.runelog.Logger.Errorf("can not unmarshal candidate => [%s]", candidate)
 			return err
 		}
-		node.SendRemoteCandidate(candidate)
+		dstNode.SendRemoteCandidate(candidate)
 	}
 
 	return nil
@@ -190,43 +190,6 @@ func (c *ControlPlane) ConnectSignalServer() {
 	}()
 
 	c.signalClient.WaitStartConnect()
-
-	err := c.initialOfferToRemotePeer()
-	if err != nil {
-		close(c.ch)
-		return
-	}
-}
-
-func (c *ControlPlane) initialOfferToRemotePeer() error {
-	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
-	operation := func() error {
-		res, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
-		if err != nil {
-			return err
-		}
-
-		if res.GetRemoteNodes() == nil {
-			return nil
-		}
-
-		for _, rp := range res.GetRemoteNodes() {
-			i, err := c.newIce(rp, res.Ip, res.Cidr)
-			if err != nil {
-				return err
-			}
-
-			c.peerConns[rp.RemoteNodeKey] = i
-			c.waitForRemoteConnCh <- i
-		}
-
-		return nil
-	}
-
-	if err := backoff.Retry(operation, b); err != nil {
-		return err
-	}
-	return nil
 }
 
 // keep the latest state of Peers received from the server
@@ -280,7 +243,7 @@ func (c *ControlPlane) newIce(node *node.Node, myip, mycidr string) (*webrtc.Ice
 		c.signalClient,
 		c.serverClient,
 		c.sock,
-		node.RemoteWgPubKey,
+		node.GetRemoteWgPubKey(),
 		remoteip,
 		node.GetRemoteNodeKey(),
 		myip,
@@ -304,6 +267,8 @@ func (c *ControlPlane) isExistPeer(remoteNodeKey string) bool {
 	return exist
 }
 
+// note: (snt)
+// Set up ice for each node and wait for gathering from the remote node.
 func (c *ControlPlane) WaitForRemoteConn() {
 	for {
 		select {
@@ -325,25 +290,6 @@ func (c *ControlPlane) WaitForRemoteConn() {
 			if err != nil {
 				c.runelog.Logger.Errorf("failed to start gathering process for [%s]", ice.GetRemoteNodeKey())
 				continue
-			}
-		}
-	}
-}
-
-// maintain flexible connections by updating remote nodes
-// information on a regular basis, rather than only when other Nodes join
-func (c *ControlPlane) SyncRemoteNodes() error {
-	for {
-		res, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
-		if err != nil {
-			return err
-		}
-
-		if res.GetRemoteNodes() != nil {
-			err := c.syncRemotePeerConfig(res.GetRemoteNodes())
-			if err != nil {
-				c.runelog.Logger.Errorf("failed to sync remote node config")
-				return err
 			}
 		}
 	}
@@ -376,4 +322,36 @@ func (c *ControlPlane) ConnectSock(ip, cidr string) {
 		}
 		c.runelog.Logger.Debugf("rcn sock connect has been disconnected")
 	}()
+}
+
+func (c *ControlPlane) SyncRemoteNodes() error {
+	res, err := c.serverClient.SyncRemoteNodesConfig(c.nk, c.conf.Spec.WgPrivateKey)
+	if err != nil {
+		return err
+	}
+
+	if res.GetRemoteNodes() == nil {
+		return nil
+	}
+
+	for _, remoteNode := range res.GetRemoteNodes() {
+		i, err := c.newIce(remoteNode, res.Ip, res.Cidr)
+		if err != nil {
+			return err
+		}
+		c.peerConns[remoteNode.GetRemoteNodeKey()] = i
+	}
+
+	return nil
+}
+
+func (c *ControlPlane) JoinRuneNetwork() error {
+	for remoteNodeKey := range c.peerConns {
+		err := c.signalClient.Join(remoteNodeKey, c.nk)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

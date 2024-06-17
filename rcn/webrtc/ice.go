@@ -397,6 +397,7 @@ func (i *Ice) waitingRemotePeerConnections() error {
 				i.runelog.Logger.Errorf("failed to signal offer, %s", err.Error())
 				return err
 			}
+			// return nil
 		}
 
 		err := i.agent.GatherCandidates()

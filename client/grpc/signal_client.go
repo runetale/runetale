@@ -28,6 +28,7 @@ type SignalClientImpl interface {
 	Offer(dstnk, srcnk string, uFlag string, pwd string) error
 	Answer(dstnk, srcnk string, uFlag string, pwd string) error
 	Connect(nk string, handler func(msg *negotiation.NegotiationRequest) error) error
+	Join(dstnk, srcnk string) error
 
 	WaitStartConnect()
 	IsReady() bool
@@ -126,6 +127,21 @@ func (c *SignalClient) Answer(
 		Pwd:        pwd,
 	}
 	_, err := c.negClient.Answer(ctx, msg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *SignalClient) Join(dstnk, srcnk string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	msg := &negotiation.JoinRequest{
+		DstNodeKey: dstnk,
+		SrcNodeKey: srcnk,
+	}
+	_, err := c.negClient.Join(ctx, msg)
 	if err != nil {
 		return err
 	}

@@ -32,6 +32,7 @@ type Rcn struct {
 	iface        *iface.Iface
 	nk           string
 	mu           *sync.Mutex
+	ch           chan struct{}
 	runelog      *runelog.Runelog
 	debug        bool
 }
@@ -60,6 +61,7 @@ func NewRcn(
 		conf:         conf,
 		nk:           nk,
 		mu:           &sync.Mutex{},
+		ch:           ch,
 		runelog:      runelog,
 		debug:        debug,
 	}
@@ -78,12 +80,27 @@ func (r *Rcn) Setup(ip, cidr string) error {
 func (r *Rcn) Start() {
 	err := r.cp.ConfigureStunTurnConf()
 	if err != nil {
-		r.runelog.Logger.Errorf("failed to set up puncher, %s", err.Error())
+		r.runelog.Logger.Errorf("failed to set up relay server, %s", err.Error())
 	}
+
+	err = r.cp.SyncRemoteNodes()
+	if err != nil {
+		r.runelog.Logger.Errorf("failed to get remote nodes, %s", err.Error())
+		close(r.ch)
+		return
+	}
+
+	go r.cp.ConnectSignalServer()
 
 	go r.cp.WaitForRemoteConn()
 
-	go r.cp.ConnectSignalServer()
+	// join
+	err = r.cp.JoinRuneNetwork()
+	if err != nil {
+		r.runelog.Logger.Errorf("failed to join network, %s", err.Error())
+		close(r.ch)
+		return
+	}
 
 	go r.cp.ConnectSock(r.iface.IP, r.iface.CIDR)
 
