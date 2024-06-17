@@ -141,6 +141,9 @@ func (c *ControlPlane) receiveSignalRequest(
 	case negotiation.NegotiationType_ANSWER:
 		dstNode.SendRemoteAnswerCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_OFFER:
+		fmt.Println(remotenk)
+		fmt.Println(uname)
+		fmt.Println(pwd)
 		dstNode.SendRemoteOfferCh(remotenk, uname, pwd)
 	case negotiation.NegotiationType_CANDIDATE:
 		candidate, err := ice.UnmarshalCandidate(candidate)
@@ -347,7 +350,6 @@ func (c *ControlPlane) SyncRemoteNodes() error {
 			return err
 		}
 		c.peerConns[remoteNode.GetRemoteNodeKey()] = i
-		fmt.Println(remoteNode.GetRemoteNodeKey())
 	}
 
 	return nil
