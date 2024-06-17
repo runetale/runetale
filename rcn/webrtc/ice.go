@@ -323,7 +323,7 @@ func (i *Ice) StartGatheringProcess() error {
 	operation := func() error {
 		err := i.signalOffer()
 		if err != nil {
-			i.runelog.Logger.Errorf("failed to signal offer, because %s", err.Error())
+			i.runelog.Logger.Debugf("failed to signal offer, because %s", err.Error())
 			return err
 		}
 		return nil
@@ -488,7 +488,7 @@ func (i *Ice) SendRemoteCandidate(candidate ice.Candidate) {
 		defer i.mu.Unlock()
 
 		if i.agent == nil {
-			i.runelog.Logger.Errorf("agent is nil")
+			i.runelog.Logger.Debugf("agent is nil")
 			return
 		}
 
