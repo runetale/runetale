@@ -199,6 +199,8 @@ func (i *Ice) Setup() (err error) {
 
 	i.wireproxy = wireproxy
 
+	go i.waitingRemotePeerConnections()
+
 	return nil
 }
 
@@ -316,7 +318,7 @@ func (i *Ice) getLocalUserIceAgentCredentials() (string, string, error) {
 func (i *Ice) StartGatheringProcess() error {
 	// must be done asynchronously, separately from SignalOffer,
 	// as it requires waiting for a connection channel from the other peers
-	go i.waitingRemotePeerConnections()
+	// go i.waitingRemotePeerConnections()
 
 	err := i.signalOffer()
 	if err != nil {

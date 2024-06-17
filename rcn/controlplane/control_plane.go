@@ -172,9 +172,6 @@ func (c *ControlPlane) ConnectSignalServer() {
 				c.mu.Lock()
 				defer c.mu.Unlock()
 
-				fmt.Println("peer conns")
-				fmt.Println(c.peerConns)
-
 				err := c.receiveSignalRequest(
 					res.GetDstNodeKey(),
 					res.GetType(),
