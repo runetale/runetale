@@ -35,7 +35,6 @@ type WireProxy struct {
 	runelog *runelog.Runelog
 }
 
-// TODO: (shinta) rewrite to proxy using sock5?
 func NewWireProxy(
 	iface *iface.Iface,
 	remoteWgPubKey string,
@@ -193,7 +192,7 @@ func (w *WireProxy) StartProxy(remote *ice.Conn) error {
 	// 	return nil
 	// }
 
-	err = w.configureNoProxy()
+	err = w.configureWireProxy()
 	if err != nil {
 		return err
 	}

@@ -388,7 +388,7 @@ func (c *ControlPlane) offerToRemotePeer() error {
 	return nil
 }
 
-func (c *ControlPlane) JoinRuneNetwork() error {
+func (c *ControlPlane) Join() error {
 	go func() {
 		b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
 		operation := func() error {

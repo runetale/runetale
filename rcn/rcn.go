@@ -94,7 +94,7 @@ func (r *Rcn) Start() {
 
 	go r.cp.ConnectSignalServer()
 
-	err = r.cp.JoinRuneNetwork()
+	err = r.cp.Join()
 	if err != nil {
 		r.runelog.Logger.Errorf("failed to join network, %s", err.Error())
 		close(r.ch)
