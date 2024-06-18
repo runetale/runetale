@@ -10,6 +10,7 @@ package controlplane
 //
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -166,6 +167,14 @@ func (c *ControlPlane) ConnectSignalServer() {
 			err := c.signalClient.Connect(c.nk, func(res *negotiation.NegotiationRequest) error {
 				c.mu.Lock()
 				defer c.mu.Unlock()
+
+				if c.peerConns[res.GetDstNodeKey()] == nil {
+					fmt.Println("error")
+					err := c.offerToRemotePeer()
+					if err != nil {
+						return err
+					}
+				}
 
 				err := c.receiveSignalRequest(
 					res.GetDstNodeKey(),
