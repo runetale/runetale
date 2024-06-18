@@ -150,6 +150,7 @@ func (c *ControlPlane) receiveSignalRequest(
 		}
 		dstNode.SendRemoteCandidate(candidate)
 	case negotiation.NegotiationType_JOIN:
+		fmt.Println("JOINED")
 		err := c.offerToRemotePeer()
 		if err != nil {
 			c.runelog.Logger.Errorf("failed to sync remote nodes")
@@ -167,14 +168,6 @@ func (c *ControlPlane) ConnectSignalServer() {
 			err := c.signalClient.Connect(c.nk, func(res *negotiation.NegotiationRequest) error {
 				c.mu.Lock()
 				defer c.mu.Unlock()
-
-				if c.peerConns[res.GetDstNodeKey()] == nil {
-					fmt.Println("error")
-					err := c.offerToRemotePeer()
-					if err != nil {
-						return err
-					}
-				}
 
 				err := c.receiveSignalRequest(
 					res.GetDstNodeKey(),
