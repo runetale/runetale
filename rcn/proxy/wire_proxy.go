@@ -177,21 +177,21 @@ func (w *WireProxy) StartProxy(remote *ice.Conn) error {
 		return err
 	}
 
-	pair, err := w.agent.GetSelectedCandidatePair()
-	if err != nil {
-		return err
-	}
+	// pair, err := w.agent.GetSelectedCandidatePair()
+	// if err != nil {
+	// 	return err
+	// }
 
-	// TODO (shinta) refactor
-	if shouldUseProxy(pair) {
-		err = w.configureWireProxy()
-		if err != nil {
-			return err
-		}
-		w.startMon()
+	// // TODO (shinta) refactor
+	// if shouldUseProxy(pair) {
+	// 	err = w.configureWireProxy()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	w.startMon()
 
-		return nil
-	}
+	// 	return nil
+	// }
 
 	err = w.configureNoProxy()
 	if err != nil {
