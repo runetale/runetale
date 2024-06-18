@@ -10,7 +10,6 @@ package controlplane
 //
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 
@@ -150,7 +149,6 @@ func (c *ControlPlane) receiveSignalRequest(
 		}
 		dstNode.SendRemoteCandidate(candidate)
 	case negotiation.NegotiationType_JOIN:
-		fmt.Println("JOINED")
 		err := c.offerToRemotePeer()
 		if err != nil {
 			c.runelog.Logger.Errorf("failed to sync remote nodes")
