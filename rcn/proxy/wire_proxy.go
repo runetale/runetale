@@ -1,17 +1,27 @@
-// Copyright (c) 2022 Runetale Inc & AUTHORS All rights reserved.
-// Use of this source code is governed by a BSD 3-Clause License
 // license that can be found in the LICENSE file.
 
 package proxy
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"net"
 
 	"github.com/pion/ice/v2"
 	"github.com/runetale/runetale/iface"
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/wg"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/icmp"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
+	"gvisor.dev/gvisor/pkg/waiter"
 )
 
 type WireProxy struct {
@@ -176,23 +186,23 @@ func (w *WireProxy) StartProxy(remote *ice.Conn) error {
 		return err
 	}
 
-	// pair, err := w.agent.GetSelectedCandidatePair()
-	// if err != nil {
-	// 	return err
-	// }
+	pair, err := w.agent.GetSelectedCandidatePair()
+	if err != nil {
+		return err
+	}
 
-	// // TODO (shinta) refactor
-	// if shouldUseProxy(pair) {
-	// 	err = w.configureWireProxy()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	w.startMon()
+	// ここをgvisorにする？
+	if shouldUseProxy(pair) {
+		err = w.configureWireProxy()
+		if err != nil {
+			return err
+		}
+		w.startMon()
 
-	// 	return nil
-	// }
+		return nil
+	}
 
-	err = w.configureWireProxy()
+	err = w.configureNoProxy()
 	if err != nil {
 		return err
 	}
@@ -256,5 +266,70 @@ func (w *WireProxy) monRemoteToLocalProxy() {
 			// TODO: gathering buffer with runemon
 			// w.runelog.Logger.Debugf("localConn read localProxyBuffer [%s]", w.localProxyBuffer[:n])
 		}
+	}
+}
+
+func (w *WireProxy) testgVisor() {
+	// Create a new TCP/IP stack with the supported network protocols.
+	s := stack.New(stack.Options{
+		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
+		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol, udp.NewProtocol, icmp.NewProtocol4, icmp.NewProtocol6},
+	})
+
+	linkEP := channel.New(512, 1280, "")
+	// Add the NIC to the stack.
+	if err := s.CreateNIC(1, linkEP); err != nil {
+		log.Fatalf("Failed to create NIC: %v", err)
+	}
+
+	s.SetPromiscuousMode(1, true)
+
+	ipv4Subnet, err := tcpip.NewSubnet(tcpip.AddrFromSlice(make([]byte, 4)), tcpip.MaskFromBytes(make([]byte, 4)))
+	if err != nil {
+		fmt.Errorf("could not create IPv4 subnet: %v", err)
+	}
+
+	// Set the default route.
+	s.SetRouteTable([]tcpip.Route{
+		{
+			Destination: ipv4Subnet,
+			NIC:         1,
+		},
+	})
+
+	// Create a TCP endpoint.
+	networkProto := ipv4.ProtocolNumber
+	var wq waiter.Queue
+	ep, tcpiperr := s.NewEndpoint(udp.ProtocolNumber, networkProto, &wq)
+	if tcpiperr != nil {
+		log.Fatalf("Failed to create endpoint: %v", err)
+	}
+
+	udpAddr, err := net.ResolveUDPAddr(w.localConn.LocalAddr().Network(), w.localConn.LocalAddr().String())
+	if err != nil {
+		log.Fatalf("Failed to ResolveUDPAddr: %v", err)
+	}
+	udpAddr.Port = wg.WgPort
+
+	localAddress := tcpip.FullAddress{
+		NIC:  1,
+		Addr: tcpip.AddrFromSlice(udpAddr.AddrPort().Addr().AsSlice()),
+		Port: udpAddr.AddrPort().Port(),
+	}
+
+	// Bind the endpoint to a local address and port.
+	if err := ep.Bind(localAddress); err != nil {
+		log.Fatalf("Failed to bind: %v", err)
+	}
+
+	pc := gonet.NewUDPConn(&wq, ep)
+	var buf [1500]byte
+	for {
+		n, a, err := pc.ReadFrom(buf[:])
+		if err != nil {
+			pc.Close()
+		}
+		fmt.Println(n)
+		fmt.Println(a)
 	}
 }
