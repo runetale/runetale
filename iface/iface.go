@@ -7,13 +7,14 @@ package iface
 import (
 	"fmt"
 	"net"
+	"net/netip"
 	"time"
 
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
-	"golang.zx2c4.com/wireguard/tun"
+	"golang.zx2c4.com/wireguard/tun/netstack"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -139,7 +140,15 @@ func (i *Iface) RemoveRemotePeer(iface string, remoteip, remotePeerPubKey string
 }
 
 func (i *Iface) CreateWithUserSpace(address string) error {
-	tunIface, err := tun.CreateTUN(i.Tun, wg.DefaultMTU)
+	// proxy
+	// listenAddr := "0.0.0.0:2000"
+
+	ip, _, err := net.ParseCIDR(address)
+	tunIface, _, err := netstack.CreateNetTUN(
+		[]netip.Addr{netip.MustParseAddr(ip.String())},
+		[]netip.Addr{},
+		wg.DefaultMTU,
+	)
 	if err != nil {
 		return err
 	}

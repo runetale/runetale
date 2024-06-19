@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/runetale/runetale/distro"
 	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
 	"github.com/runetale/runetale/wg"
@@ -19,9 +18,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func isWireGuardModule(
-	runelog *runelog.Runelog,
-) bool {
+func isWireGuardModule() bool {
 	_, err := utils.ExecCmd("modinfo wireguard")
 	return err == nil
 }
@@ -32,13 +29,10 @@ func CreateIface(
 ) error {
 	addr := i.IP + "/" + i.CIDR
 
-	if distro.Get() == distro.NixOS {
+	if isWireGuardModule() {
 		return createWithKernelSpace(i.Tun, i.WgPrivateKey, addr, runelog)
 	}
 
-	if isWireGuardModule(runelog) {
-		return createWithKernelSpace(i.Tun, i.WgPrivateKey, addr, runelog)
-	}
 	return createWithUserSpace(i, addr)
 }
 

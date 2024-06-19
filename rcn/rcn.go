@@ -67,7 +67,7 @@ func NewRcn(
 	}
 }
 
-// call Setup function before Start
+// required root permission
 func (r *Rcn) Setup(ip, cidr string) error {
 	err := r.createIface(ip, cidr)
 	if err != nil {
