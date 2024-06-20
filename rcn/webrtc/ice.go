@@ -147,7 +147,6 @@ func (i *Ice) Setup() (err error) {
 	i.sigexec = NewSigExecuter(i.signalClient, i.remoteNodeKey, i.nk, i.runelog)
 
 	// configure ice agent
-	// random port
 	i.udpMuxConn, err = net.ListenUDP("udp4", &net.UDPAddr{Port: 0})
 	i.udpMuxConnSrflx, err = net.ListenUDP("udp4", &net.UDPAddr{Port: 0})
 
@@ -273,7 +272,13 @@ func (i *Ice) closeIceAgent() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	err := i.udpMuxSrflx.Close()
+	err := i.udpMux.Close()
+	if err != nil {
+		i.runelog.Logger.Debugf("failed to close udp mux")
+		return err
+	}
+
+	err = i.udpMuxSrflx.Close()
 	if err != nil {
 		i.runelog.Logger.Debugf("failed to close udp mux srflx")
 		return err
@@ -293,13 +298,7 @@ func (i *Ice) closeIceAgent() error {
 
 	err = i.agent.Close()
 	if err != nil {
-		i.runelog.Logger.Debugf("failed to close ice agent")
-		return err
-	}
-
-	err = i.udpMux.Close()
-	if err != nil {
-		i.runelog.Logger.Debugf("failed to close udp mux")
+		i.runelog.Logger.Debugf("failed to close udp mux conn srlfx")
 		return err
 	}
 
@@ -378,12 +377,13 @@ func (i *Ice) Cleanup() error {
 		if err != nil {
 			return err
 		}
-
-		err = i.CloseIce()
-		if err != nil {
-			return err
-		}
 	}
+
+	err := i.CloseIce()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

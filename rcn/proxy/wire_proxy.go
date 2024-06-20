@@ -191,7 +191,6 @@ func (w *WireProxy) StartProxy(remote *ice.Conn) error {
 		return err
 	}
 
-	// ここをgvisorにする？
 	if shouldUseProxy(pair) {
 		err = w.configureWireProxy()
 		if err != nil {
