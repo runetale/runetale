@@ -4,7 +4,7 @@
 
 package daemon
 
-import "github.com/runetale/runetale/runelog"
+import "github.com/runetale/runetale/log"
 
 const (
 	running      = "\t[\033[32mRUNNING\033[0m]"
@@ -22,7 +22,7 @@ type Daemon interface {
 
 func NewDaemon(
 	binPath, serviceName, daemonFilePath, systemConfig string,
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) Daemon {
-	return newDaemon(binPath, serviceName, daemonFilePath, systemConfig, runelog)
+	return newDaemon(binPath, serviceName, daemonFilePath, systemConfig, logger)
 }

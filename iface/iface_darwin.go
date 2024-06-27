@@ -4,123 +4,112 @@
 
 package iface
 
-import (
-	"fmt"
-	"net"
-	"os/exec"
-	"strings"
+// func CreateIface(
+// 	i *Iface,
+// 	runelog *runelog.Runelog,
+// ) error {
+// 	addr := i.IP + "/" + i.CIDR
 
-	"github.com/runetale/runetale/runelog"
-	"github.com/runetale/runetale/utils"
-	"github.com/runetale/runetale/wg"
-	"golang.zx2c4.com/wireguard/conn"
-	"golang.zx2c4.com/wireguard/device"
-	"golang.zx2c4.com/wireguard/tun"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-)
+// 	err := i.createWithUserSpace(i.Tun, addr)
+// 	if err != nil {
+// 		runelog.log.Errorf("failed to create user space, %v", err)
+// 		return err
+// 	}
 
-func CreateIface(
-	i *Iface,
-	runelog *runelog.Runelog,
-) error {
-	addr := i.IP + "/" + i.CIDR
+// 	key, err := wgtypes.ParseKey(i.WgPrivateKey)
+// 	if err != nil {
+// 		runelog.log.Warnf("failed to parsing wireguard private key, %v", err)
+// 		return err
+// 	}
 
-	err := i.createWithUserSpace(i.Tun, addr)
-	if err != nil {
-		runelog.Logger.Errorf("failed to create user space, %v", err)
-		return err
-	}
+// 	fwmark := 0
+// 	port := wg.WgPort
 
-	key, err := wgtypes.ParseKey(i.WgPrivateKey)
-	if err != nil {
-		runelog.Logger.Warnf("failed to parsing wireguard private key, %v", err)
-		return err
-	}
+// 	config := wgtypes.Config{
+// 		PrivateKey:   &key,
+// 		ReplacePeers: false,
+// 		FirewallMark: &fwmark,
+// 		ListenPort:   &port,
+// 	}
 
-	fwmark := 0
-	port := wg.WgPort
+// 	return i.configureDevice(config)
+// }
 
-	config := wgtypes.Config{
-		PrivateKey:   &key,
-		ReplacePeers: false,
-		FirewallMark: &fwmark,
-		ListenPort:   &port,
-	}
+// func RemoveIface(
+// 	tunname string,
+// 	runelog *runelog.Runelog,
+// ) error {
+// 	ipCmd, err := exec.LookPath("ifconfig")
+// 	if err != nil {
+// 		runelog.log.Errorf("failed to lookup ip command, %s", err.Error())
+// 		return err
+// 	}
 
-	return i.configureDevice(config)
-}
+// 	_, err = utils.ExecCmd(ipCmd + fmt.Sprintf(" %s", tunname) + " down")
+// 	if err != nil {
+// 		runelog.log.Errorf("failed to ifconfig delete, because %s", err.Error())
+// 	}
 
-func RemoveIface(
-	tunname string,
-	runelog *runelog.Runelog,
-) error {
-	ipCmd, err := exec.LookPath("ifconfig")
-	if err != nil {
-		runelog.Logger.Errorf("failed to lookup ip command, %s", err.Error())
-		return err
-	}
+// 	return nil
+// }
 
-	_, err = utils.ExecCmd(ipCmd + fmt.Sprintf(" %s", tunname) + " down")
-	if err != nil {
-		runelog.Logger.Errorf("failed to ifconfig delete, because %s", err.Error())
-	}
+// func (i *Iface) createWithUserSpace(tunname, address string) error {
+// 	tunIface, err := tun.CreateTUN(tunname, wg.DefaultMTU)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	// todo:
+// 	// 今はconn.NewDefaultBindを使用
+// 	// transport bindをiceを使用して実装する
+// 	// conn/bind_std.goのtype StdNetBind structをwrapしたbindを実装する
+// 	tunDevice := device.NewDevice(tunIface, conn.NewDefaultBind(), device.NewLogger(device.LogLevelSilent, "runetale: "))
+// 	err = tunDevice.Up()
+// 	if err != nil {
+// 		return err
+// 	}
 
-func (i *Iface) createWithUserSpace(tunname, address string) error {
-	tunIface, err := tun.CreateTUN(tunname, wg.DefaultMTU)
-	if err != nil {
-		return err
-	}
+// 	uapi, err := getUAPI(tunname)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	tunDevice := device.NewDevice(tunIface, conn.NewDefaultBind(), device.NewLogger(device.LogLevelSilent, "runetale: "))
-	err = tunDevice.Up()
-	if err != nil {
-		return err
-	}
+// 	go func() {
+// 		for {
+// 			conn, err := uapi.Accept()
+// 			if err != nil {
+// 				fmt.Printf("uapi accept failed with error: %v\n", err)
+// 				continue
+// 			}
+// 			go tunDevice.IpcHandle(conn)
+// 		}
+// 	}()
 
-	uapi, err := getUAPI(tunname)
-	if err != nil {
-		return err
-	}
+// 	err = assignAddr(tunname, address)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	go func() {
-		for {
-			conn, err := uapi.Accept()
-			if err != nil {
-				fmt.Printf("uapi accept failed with error: %v\n", err)
-				continue
-			}
-			go tunDevice.IpcHandle(conn)
-		}
-	}()
+// 	return nil
+// }
 
-	err = assignAddr(tunname, address)
-	if err != nil {
-		return err
-	}
+// func assignAddr(tunname, address string) error {
+// 	ip := strings.Split(address, "/")
+// 	cmd := exec.Command("ifconfig", tunname, "inet", address, ip[0])
+// 	if out, err := cmd.CombinedOutput(); err != nil {
+// 		fmt.Printf("Command: %v failed with output %s and error: %v", cmd.String(), out, err)
+// 		return err
+// 	}
 
-	return nil
-}
+// 	_, resolvedNet, err := net.ParseCIDR(address)
+// 	if err != nil {
+// 		return err
+// 	}
 
-func assignAddr(tunname, address string) error {
-	ip := strings.Split(address, "/")
-	cmd := exec.Command("ifconfig", tunname, "inet", address, ip[0])
-	if out, err := cmd.CombinedOutput(); err != nil {
-		fmt.Printf("Command: %v failed with output %s and error: %v", cmd.String(), out, err)
-		return err
-	}
+// 	err = addRoute(tunname, resolvedNet)
+// 	if err != nil {
+// 		fmt.Printf("Adding route failed with error: %v", err)
+// 	}
 
-	_, resolvedNet, err := net.ParseCIDR(address)
-	if err != nil {
-		return err
-	}
-
-	err = addRoute(tunname, resolvedNet)
-	if err != nil {
-		fmt.Printf("Adding route failed with error: %v", err)
-	}
-
-	return nil
-}
+// 	return nil
+// }

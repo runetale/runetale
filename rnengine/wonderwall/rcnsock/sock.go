@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"github.com/runetale/runetale/client/grpc"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 )
 
 type RcnSock struct {
@@ -22,21 +22,19 @@ type RcnSock struct {
 	ip   string
 	cidr string
 
-	runelog *runelog.Runelog
+	log *log.Logger
 
 	ch chan struct{}
 }
 
 // if scp is nil when making this function call, just listen
 func NewRcnSock(
-	runelog *runelog.Runelog,
+	log *log.Logger,
 	ch chan struct{},
 ) *RcnSock {
 	return &RcnSock{
-
-		runelog: runelog,
-
-		ch: ch,
+		log: log,
+		ch:  ch,
 	}
 }
 
@@ -72,7 +70,7 @@ func (s *RcnSock) listen(conn net.Conn) {
 
 		err = encoder.Encode(mes)
 		if err != nil {
-			s.runelog.Logger.Errorf("failed to encode wondersock. %s", err.Error())
+			s.log.Logger.Errorf("failed to encode wondersock. %s", err.Error())
 			break
 		}
 	}
@@ -98,18 +96,18 @@ func (s *RcnSock) Connect(
 
 	go func() {
 		<-s.ch
-		s.runelog.Logger.Debugf("close the rcn socket")
+		s.log.Logger.Debugf("close the rcn socket")
 		s.cleanup()
 	}()
 
-	s.runelog.Logger.Debugf("starting rcn socket")
+	s.log.Logger.Debugf("starting rcn socket")
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			s.runelog.Logger.Errorf("failed to accept rcn socket. %s", err.Error())
+			s.log.Logger.Errorf("failed to accept rcn socket. %s", err.Error())
 		}
 
-		s.runelog.Logger.Debugf("accepted rcn sock")
+		s.log.Logger.Debugf("accepted rcn sock")
 
 		go s.listen(conn)
 	}

@@ -18,23 +18,27 @@ import (
 	"github.com/runetale/runetale/conf"
 	"github.com/runetale/runetale/daemon"
 	dd "github.com/runetale/runetale/daemon/runetaled"
-	"github.com/runetale/runetale/engine"
+	"github.com/runetale/runetale/log"
+	"github.com/runetale/runetale/net/dial"
+	"github.com/runetale/runetale/net/rntun"
 	"github.com/runetale/runetale/paths"
 	"github.com/runetale/runetale/process"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/rnengine"
+	"github.com/runetale/runetale/rnengine/router"
+	runesystemd "github.com/runetale/runetale/rune_systemd"
 	"github.com/runetale/runetale/types/flagtype"
 )
 
 var upArgs struct {
-	clientPath  string
-	accessToken string
-	serverHost  string
-	serverPort  int64
-	signalHost  string
-	signalPort  int64
-	logFile     string
-	logLevel    string
-	debug       bool
+	clientPath string
+	composeKey string
+	serverHost string
+	serverPort int64
+	signalHost string
+	signalPort int64
+	logFile    string
+	logLevel   string
+	debug      bool
 }
 
 var upCmd = &ffcli.Command{
@@ -45,12 +49,12 @@ var upCmd = &ffcli.Command{
 		fs := flag.NewFlagSet("up", flag.ExitOnError)
 		fs.StringVar(&upArgs.clientPath, "path", paths.DefaultClientConfigFile(), "client default config file")
 		fs.StringVar(&upArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "server host")
-		fs.StringVar(&upArgs.accessToken, "access-token", "", "launch node with access token")
+		fs.StringVar(&upArgs.composeKey, "compose-key", "", "launch node with access token")
 		fs.Int64Var(&upArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
 		fs.StringVar(&upArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&upArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
 		fs.StringVar(&upArgs.logFile, "logfile", paths.DefaultClientLogFile(), "set logfile path")
-		fs.StringVar(&upArgs.logLevel, "loglevel", runelog.DebugLevelStr, "set log level")
+		fs.StringVar(&upArgs.logLevel, "loglevel", log.DebugLevelStr, "set log level")
 		fs.BoolVar(&upArgs.debug, "debug", false, "is debug")
 		return fs
 	})(),
@@ -60,7 +64,7 @@ var upCmd = &ffcli.Command{
 // after login, check to see if the runetaled daemon is up.
 // if not, prompt the user to start it.
 func execUp(ctx context.Context, args []string) error {
-	runelog, err := runelog.NewRunelog("runetale up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
+	logger, err := log.NewLogger("runetale up", upArgs.logLevel, upArgs.logFile, upArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v", err)
 		return nil
@@ -77,39 +81,44 @@ func execUp(ctx context.Context, args []string) error {
 		uint(upArgs.serverPort),
 		upArgs.signalHost,
 		uint(upArgs.signalPort),
-		runelog,
+		logger,
 	)
 	if err != nil {
 		fmt.Printf("failed to create client conf, because %s\n", err.Error())
 		return err
 	}
 
-	if !isInstallRunetaledDaemon(runelog) && !isRunningRunetaledProcess(runelog) {
-		runelog.Logger.Warnf("you need to activate runetaled. execute this command 'runetaled up'")
-		return nil
-	}
+	// if !isInstallRunetaledDaemon(logger) && !isRunningRunetaledProcess(logger) {
+	// 	logger.Logger.Warnf("you need to activate runetaled. execute this command 'runetaled up'")
+	// 	return nil
+	// }
 
-	ip, cidr, err := loginNode(upArgs.accessToken, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(upArgs.composeKey, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err
 	}
+	fmt.Println(ip)
+	fmt.Println(cidr)
 
-	err = upEngine(
-		ctx,
-		c.ServerClient,
-		runelog,
-		c.Spec.TunName,
-		c.NodePubKey,
-		ip,
-		cidr,
-		c.Spec.WgPrivateKey,
-		c.Spec.BlackList,
-	)
-	if err != nil {
-		runelog.Logger.Warnf("failed to start engine. because %v", err)
-		return err
-	}
+	// err = upEngine(
+	// 	ctx,
+	// 	c.ServerClient,
+	// 	logger,
+	// 	c.Spec.TunName,
+	// 	c.NodePubKey,
+	// 	ip,
+	// 	cidr,
+	// 	c.Spec.WgPrivateKey,
+	// 	c.Spec.BlackList,
+	// )
+	// if err != nil {
+	// 	logger.Logger.Warnf("failed to start engine. because %v", err)
+	// 	return err
+	// }
+
+	sys := new(runesystemd.System)
+	tryEngine(logger, false, c.Spec.TunName, sys)
 
 	stop := make(chan struct{})
 	go func() {
@@ -131,9 +140,9 @@ func execUp(ctx context.Context, args []string) error {
 	return nil
 }
 
-func loginNode(accessToken, nk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
-	if accessToken != "" {
-		res, err := client.ComposeNode(accessToken, nk, wgPrivKey)
+func loginNode(composeKey, nk, wgPrivKey string, client grpc_client.ServerClientImpl) (string, string, error) {
+	if composeKey != "" {
+		res, err := client.ComposeNode(composeKey, nk, wgPrivKey)
 		if err != nil {
 			return "", "", err
 		}
@@ -147,52 +156,62 @@ func loginNode(accessToken, nk, wgPrivKey string, client grpc_client.ServerClien
 	return res.GetIp(), res.GetCidr(), nil
 }
 
-func upEngine(
-	ctx context.Context,
-	serverClient grpc_client.ServerClientImpl,
-	runelog *runelog.Runelog,
-	tunName string,
-	mPubKey string,
-	ip string,
-	cidr string,
-	wgPrivKey string,
-	blackList []string,
-) error {
-	pctx, cancel := context.WithCancel(ctx)
-
-	engine, err := engine.NewEngine(
-		serverClient,
-		runelog,
-		tunName,
-		mPubKey,
-		ip,
-		cidr,
-		wgPrivKey,
-		blackList,
-		pctx,
-		cancel,
-	)
-	if err != nil {
-		runelog.Logger.Warnf("failed to connect signal client. because %v", err)
-		return err
-	}
-
-	err = engine.Start()
-	if err != nil {
-		runelog.Logger.Warnf("failed to start engine. because %v", err)
-		return err
-	}
-
-	return nil
-}
-
-func isInstallRunetaledDaemon(runelog *runelog.Runelog) bool {
-	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, runelog)
+func isInstallRunetaledDaemon(logger *log.Logger) bool {
+	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, logger)
 	_, isInstalled := d.Status()
 	return isInstalled
 }
 
-func isRunningRunetaledProcess(runelog *runelog.Runelog) bool {
-	p := process.NewProcess(runelog)
+func isRunningRunetaledProcess(logger *log.Logger) bool {
+	p := process.NewProcess(logger)
 	return p.GetRunetaledProcess()
+}
+
+func getLocalBackend() {
+	// create userspaceEngine
+	// creeate netstack
+	//
+}
+
+func createEngine(sys *runesystemd.System, tunName string, log *log.Logger) (err error) {
+	err = tryEngine(log, false, tunName, sys)
+	return
+}
+
+// TODO(snt)
+// netstack onlyのモードの対応、tunを作らずに実装する
+// netstack-onlyの場合はこの関数の中でtunの影武者が作られる
+// 影武者を使って通信
+// config.Tun = rntun.NewKagemusha()
+func tryEngine(log *log.Logger, isNetStack bool, tunName string, sys *runesystemd.System) error {
+	dialer := &dial.Dialer{Logger: log}
+	conf := rnengine.Config{
+		Dialer: dialer,
+	}
+	sys.Set(dialer)
+
+	// set tun
+	dev, devName, err := rntun.New(log, tunName)
+	if err != nil {
+		rntun.Diagnose(log, tunName, err)
+		return fmt.Errorf("rntun.New(%q): %w", tunName, err)
+	}
+	conf.Tun = dev
+	log.Logger.Debugf("created tun device: %s", devName)
+
+	// set router
+	r, err := router.New(dev, log)
+	if err != nil {
+		dev.Close()
+		return err
+	}
+	conf.Router = r
+	sys.Set(conf.Router)
+
+	err = rnengine.NewUserspaceEngine(log, conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

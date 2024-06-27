@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD 3-Clause License
 // license that can be found in the LICENSE file.
 
-package runelog
+package log
 
 import (
 	"fmt"
@@ -24,22 +24,22 @@ const (
 // 	globalLogger *zap.Logger
 // )
 
-type Runelog struct {
+type Logger struct {
 	Logger *zap.SugaredLogger
 }
 
-func NewRunelog(name string, logLevel string, logFile string, dev bool) (*Runelog, error) {
-	l, err := initRunelog(logLevel, logFile, dev)
+func NewLogger(name string, logLevel string, logFile string, dev bool) (*Logger, error) {
+	l, err := initLogger(logLevel, logFile, dev)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Runelog{
+	return &Logger{
 		Logger: l.Named(name).Sugar(),
 	}, nil
 }
 
-func initRunelog(logLevel string, logFile string, dev bool) (*zap.Logger, error) {
+func initLogger(logLevel string, logFile string, dev bool) (*zap.Logger, error) {
 	var level zapcore.Level
 	switch logLevel {
 	case DebugLevelStr:

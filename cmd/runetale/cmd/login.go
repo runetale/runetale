@@ -12,21 +12,21 @@ import (
 
 	"github.com/peterbourgon/ff/v2/ffcli"
 	"github.com/runetale/runetale/conf"
+	"github.com/runetale/runetale/log"
 	"github.com/runetale/runetale/paths"
-	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/types/flagtype"
 )
 
 var loginArgs struct {
-	clientPath  string
-	accessToken string
-	serverHost  string
-	serverPort  int64
-	signalHost  string
-	signalPort  int64
-	logFile     string
-	logLevel    string
-	debug       bool
+	clientPath string
+	composeKey string
+	serverHost string
+	serverPort int64
+	signalHost string
+	signalPort int64
+	logFile    string
+	logLevel   string
+	debug      bool
 }
 
 var loginCmd = &ffcli.Command{
@@ -35,14 +35,14 @@ var loginCmd = &ffcli.Command{
 	ShortHelp:  "login to runetale, start the management server and then run it",
 	FlagSet: (func() *flag.FlagSet {
 		fs := flag.NewFlagSet("login", flag.ExitOnError)
-		fs.StringVar(&loginArgs.accessToken, "access-token", "", "launch node with access token")
+		fs.StringVar(&loginArgs.composeKey, "compose-key", "", "launch node with compose key")
 		fs.StringVar(&loginArgs.clientPath, "path", paths.DefaultClientConfigFile(), "client default config file")
 		fs.StringVar(&loginArgs.serverHost, "server-host", "https://api.caterpie.runetale.com", "server host")
 		fs.Int64Var(&loginArgs.serverPort, "server-port", flagtype.DefaultServerPort, "grpc server host port")
 		fs.StringVar(&loginArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&loginArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
 		fs.StringVar(&loginArgs.logFile, "logfile", paths.DefaultClientLogFile(), "set logfile path")
-		fs.StringVar(&loginArgs.logLevel, "loglevel", runelog.InfoLevelStr, "set log level")
+		fs.StringVar(&loginArgs.logLevel, "loglevel", log.InfoLevelStr, "set log level")
 		fs.BoolVar(&loginArgs.debug, "debug", false, "for debug logging")
 		return fs
 	})(),
@@ -50,7 +50,7 @@ var loginCmd = &ffcli.Command{
 }
 
 func execLogin(ctx context.Context, args []string) error {
-	runelog, err := runelog.NewRunelog("runetale login", loginArgs.logLevel, loginArgs.logFile, loginArgs.debug)
+	logger, err := log.NewLogger("runetale login", loginArgs.logLevel, loginArgs.logFile, loginArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v\n", err)
 		return nil
@@ -64,20 +64,20 @@ func execLogin(ctx context.Context, args []string) error {
 		loginArgs.debug,
 		loginArgs.serverHost, uint(loginArgs.serverPort),
 		loginArgs.signalHost, uint(loginArgs.signalPort),
-		runelog,
+		logger,
 	)
 	if err != nil {
 		fmt.Printf("failed to create client conf, because %s\n", err.Error())
 		return nil
 	}
 
-	ip, cidr, err := loginNode(loginArgs.accessToken, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
+	ip, cidr, err := loginNode(loginArgs.composeKey, c.NodePubKey, c.Spec.WgPrivateKey, c.ServerClient)
 	if err != nil {
 		fmt.Printf("failed to login %s\n", err.Error())
 		return err
 	}
 
-	runelog.Logger.Infof("runetale ip => [%s/%s]", ip, cidr)
+	logger.Logger.Debugf("runetale ip => [%s/%s]", ip, cidr)
 
 	return nil
 }

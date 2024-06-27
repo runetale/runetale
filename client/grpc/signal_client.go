@@ -13,8 +13,8 @@ import (
 	"github.com/pion/ice/v2"
 	"github.com/runetale/client-go/runetale/runetale/v1/negotiation"
 	"github.com/runetale/client-go/runetale/runetale/v1/rtc"
-	"github.com/runetale/runetale/rcn/conn"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
+	"github.com/runetale/runetale/rnengine/wonderwall/conn"
 	"github.com/runetale/runetale/system"
 	"github.com/runetale/runetale/utils"
 	"google.golang.org/grpc"
@@ -28,6 +28,7 @@ type SignalClientImpl interface {
 	Offer(dstnk, srcnk string, uFlag string, pwd string) error
 	Answer(dstnk, srcnk string, uFlag string, pwd string) error
 	Connect(nk string, handler func(msg *negotiation.NegotiationRequest) error) error
+	Join(dstnk, srcnk string) error
 
 	WaitStartConnect()
 	IsReady() bool
@@ -51,14 +52,14 @@ type SignalClient struct {
 
 	connState *conn.ConnectState
 
-	runelog *runelog.Runelog
+	log *log.Logger
 }
 
 func NewSignalClient(
 	sysInfo system.SysInfo,
 	conn *grpc.ClientConn,
 	cs *conn.ConnectState,
-	runelog *runelog.Runelog,
+	log *log.Logger,
 ) SignalClientImpl {
 	return &SignalClient{
 		sysInfo:   sysInfo,
@@ -69,7 +70,7 @@ func NewSignalClient(
 		mux:       sync.Mutex{},
 		// at this time, it is in an absolutely DISCONNECTED state
 		connState: cs,
-		runelog:   runelog,
+		log:       log,
 	}
 }
 
@@ -132,6 +133,21 @@ func (c *SignalClient) Answer(
 	return nil
 }
 
+func (c *SignalClient) Join(dstnk, srcnk string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	msg := &negotiation.JoinRequest{
+		DstNodeKey: dstnk,
+		SrcNodeKey: srcnk,
+	}
+	_, err := c.negClient.Join(ctx, msg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *SignalClient) Connect(nk string, handler func(msg *negotiation.NegotiationRequest) error) error {
 	md := metadata.New(map[string]string{utils.NodeKey: nk, utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
@@ -147,7 +163,7 @@ func (c *SignalClient) Connect(nk string, handler func(msg *negotiation.Negotiat
 	defer func() {
 		err := stream.CloseSend()
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to close start connect")
+			c.log.Logger.Errorf("failed to close start connect")
 			return
 		}
 	}()
@@ -155,17 +171,17 @@ func (c *SignalClient) Connect(nk string, handler func(msg *negotiation.Negotiat
 	for {
 		msg, err := stream.Recv()
 		if err == io.EOF {
-			c.runelog.Logger.Errorf("connect stream return to EOF, received by [%s]", nk)
+			c.log.Logger.Errorf("connect stream return to EOF, received by [%s]", nk)
 			return err
 		}
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to get grpc client stream for node key: %s", msg.DstNodeKey)
+			c.log.Logger.Errorf("failed to get grpc client stream for node key: %s", msg.DstNodeKey)
 			return err
 		}
 
 		err = handler(msg)
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to handle grpc client stream stream in node key: %s", msg.DstNodeKey)
+			c.log.Logger.Errorf("failed to handle grpc client stream stream in node key: %s", msg.DstNodeKey)
 			return err
 		}
 	}

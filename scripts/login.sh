@@ -5,3 +5,4 @@ sudo ./runetale login -signal-host=$SIGNAL_HOST \
     -signal-port=$SIGNAL_PORT \
     -server-port=$SERVER_PORT \
     -debug=$IS_DEBUG \
+    -compose-key=$COMPOSE_KEY

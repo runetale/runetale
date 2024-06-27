@@ -9,9 +9,10 @@ package webrtc
 //
 
 import (
+	"github.com/runetale/runetale/log"
+
 	"github.com/pion/ice/v2"
 	"github.com/runetale/runetale/client/grpc"
-	"github.com/runetale/runetale/runelog"
 )
 
 type SigExecuter struct {
@@ -19,21 +20,21 @@ type SigExecuter struct {
 	dstmk        string
 	srcmk        string
 
-	runelog *runelog.Runelog
+	log *log.Logger
 }
 
 func NewSigExecuter(
 	signalClient grpc.SignalClientImpl,
 	dstmk string,
 	srcmk string,
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) *SigExecuter {
 	return &SigExecuter{
 		signalClient: signalClient,
 		dstmk:        dstmk,
 		srcmk:        srcmk,
 
-		runelog: runelog,
+		log: logger,
 	}
 }
 
@@ -44,7 +45,7 @@ func (s *SigExecuter) Candidate(
 		go func() {
 			err := s.signalClient.Candidate(s.dstmk, s.srcmk, candidate)
 			if err != nil {
-				s.runelog.Logger.Errorf("failed to candidate against signal server, becasuse %s", err.Error())
+				s.log.Logger.Errorf("failed to candidate against signal server, becasuse %s", err.Error())
 				return
 			}
 		}()

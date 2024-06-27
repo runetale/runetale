@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 )
 
 type daemon struct {
@@ -29,34 +28,33 @@ type daemon struct {
 	// daemon system confi
 	systemConfig string
 
-	runelog *runelog.Runelog
+	log *log.Logger
 }
 
 func newDaemon(
 	binPath, serviceName, daemonFilePath, systemConfig string,
-	wl *runelog.Runelog,
+	l *log.Logger,
 ) Daemon {
 	return &daemon{
 		binPath:        binPath,
 		serviceName:    serviceName,
 		daemonFilePath: daemonFilePath,
 		systemConfig:   systemConfig,
-
-		runelog: wl,
+		log:            l,
 	}
 }
 
 func (d *daemon) Install() (err error) {
 	defer func() {
 		if os.Getuid() != 0 && err != nil {
-			d.runelog.Logger.Errorf("run it again with sudo privileges: %s", err.Error())
+			d.log.Logger.Errorf("run it again with sudo privileges: %s", err.Error())
 			err = fmt.Errorf("run it again with sudo privileges: %s", err.Error())
 		}
 	}()
 
 	err = d.Uninstall()
 	if err != nil {
-		d.runelog.Logger.Errorf("uninstallation of %s failed. plist file is here %s. because %s\n", d.serviceName, d.daemonFilePath, err.Error())
+		d.log.Logger.Errorf("uninstallation of %s failed. plist file is here %s. because %s\n", d.serviceName, d.daemonFilePath, err.Error())
 		return err
 	}
 
@@ -69,27 +67,27 @@ func (d *daemon) Install() (err error) {
 	// - tmpBin to a real executable file
 
 	if err := os.MkdirAll(filepath.Dir(d.binPath), 0755); err != nil {
-		d.runelog.Logger.Errorf("failed to create %s. because %s\n", d.binPath, err.Error())
+		d.log.Logger.Errorf("failed to create %s. because %s\n", d.binPath, err.Error())
 		return err
 	}
 
 	exePath, err := os.Executable()
 	if err != nil {
-		d.runelog.Logger.Errorf("failed to get executablePath. because %s\n", err.Error())
+		d.log.Logger.Errorf("failed to get executablePath. because %s\n", err.Error())
 		return err
 	}
 
 	tmpBin := d.binPath + ".tmp"
 	f, err := os.Create(tmpBin)
 	if err != nil {
-		d.runelog.Logger.Errorf("failed to create %s. because %s\n", tmpBin, err.Error())
+		d.log.Logger.Errorf("failed to create %s. because %s\n", tmpBin, err.Error())
 		return err
 	}
 
 	exeFile, err := os.Open(exePath)
 	if err != nil {
 		f.Close()
-		d.runelog.Logger.Errorf("failed to open %s. because %s\n", exePath, err.Error())
+		d.log.Logger.Errorf("failed to open %s. because %s\n", exePath, err.Error())
 		return err
 	}
 
@@ -97,33 +95,33 @@ func (d *daemon) Install() (err error) {
 	exeFile.Close()
 	if err != nil {
 		f.Close()
-		d.runelog.Logger.Errorf("failed to copy %s to %s. because %s\n", f, exePath, err.Error())
+		d.log.Logger.Errorf("failed to copy %s to %s. because %s\n", f, exePath, err.Error())
 		return err
 	}
 
 	if err := f.Close(); err != nil {
-		d.runelog.Logger.Errorf("failed to close the %s. because %s\n", f.Name(), err.Error())
+		d.log.Logger.Errorf("failed to close the %s. because %s\n", f.Name(), err.Error())
 		return err
 	}
 
 	if err := os.Chmod(tmpBin, 0755); err != nil {
-		d.runelog.Logger.Errorf("failed to grant permission for %s. because %s\n", tmpBin, err.Error())
+		d.log.Logger.Errorf("failed to grant permission for %s. because %s\n", tmpBin, err.Error())
 		return err
 	}
 
 	if err := os.Rename(tmpBin, d.binPath); err != nil {
-		d.runelog.Logger.Errorf("failed to rename %s to %s. because %s\n", tmpBin, d.binPath, err.Error())
+		d.log.Logger.Errorf("failed to rename %s to %s. because %s\n", tmpBin, d.binPath, err.Error())
 		return err
 	}
 
-	if err := ioutil.WriteFile(d.daemonFilePath, []byte(d.systemConfig), 0755); err != nil {
-		d.runelog.Logger.Errorf("failed to write %s to %s. because %s\n", d.daemonFilePath, d.systemConfig, err.Error())
+	if err := os.WriteFile(d.daemonFilePath, []byte(d.systemConfig), 0755); err != nil {
+		d.log.Logger.Errorf("failed to write %s to %s. because %s\n", d.daemonFilePath, d.systemConfig, err.Error())
 		return err
 	}
 
 	err = d.load()
 	if err != nil {
-		d.runelog.Logger.Errorf("failed to load %s. plist path is here %s. because %s\n", d.serviceName, d.daemonFilePath, err.Error())
+		d.log.Logger.Errorf("failed to load %s. plist path is here %s. because %s\n", d.serviceName, d.daemonFilePath, err.Error())
 		return err
 	}
 
@@ -140,12 +138,12 @@ func (d *daemon) Uninstall() (err error) {
 	if isRunnning {
 		err := d.Stop()
 		if err != nil {
-			d.runelog.Logger.Errorf("failed to stop %s. plist path is here %s. because %s\n", d.serviceName, d.daemonFilePath, err.Error())
+			d.log.Logger.Errorf("failed to stop %s. plist path is here %s. because %s\n", d.serviceName, d.daemonFilePath, err.Error())
 			return err
 		}
 		err = d.unload()
 		if err != nil {
-			d.runelog.Logger.Errorf("failed to unload %s. plist path is here %s. because %s\n", d.serviceName, d.daemonFilePath, err.Error())
+			d.log.Logger.Errorf("failed to unload %s. plist path is here %s. because %s\n", d.serviceName, d.daemonFilePath, err.Error())
 			return err
 		}
 	}

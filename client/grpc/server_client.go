@@ -10,7 +10,7 @@ import (
 	"github.com/runetale/client-go/runetale/runetale/v1/daemon"
 	"github.com/runetale/client-go/runetale/runetale/v1/login"
 	"github.com/runetale/client-go/runetale/runetale/v1/node"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 	"github.com/runetale/runetale/system"
 	"github.com/runetale/runetale/utils"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -21,7 +21,7 @@ import (
 
 type ServerClientImpl interface {
 	LoginNode(nk, wgPrivKey string) (*login.LoginNodeResponse, error)
-	ComposeNode(token, nk, wgPrivKey string) (*node.ComposeNodeResponse, error)
+	ComposeNode(composeKey, nk, wgPrivKey string) (*node.ComposeNodeResponse, error)
 	SyncRemoteNodesConfig(nk, wgPrivKey string) (*node.SyncNodesResponse, error)
 	ConnectLoginSession(nk string) (*login.LoginSessionResponse, error)
 	Connect(nk string) (*daemon.GetConnectionStatusResponse, error)
@@ -36,13 +36,13 @@ type ServerClient struct {
 	loginClient  login.LoginServiceClient
 	conn         *grpc.ClientConn
 	ctx          context.Context
-	runelog      *runelog.Runelog
+	log          *log.Logger
 }
 
 func NewServerClient(
 	sysInfo system.SysInfo,
 	conn *grpc.ClientConn,
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) ServerClientImpl {
 	return &ServerClient{
 		sysInfo:      sysInfo,
@@ -51,7 +51,7 @@ func NewServerClient(
 		loginClient:  login.NewLoginServiceClient(conn),
 		conn:         conn,
 		ctx:          context.Background(),
-		runelog:      runelog,
+		log:          logger,
 	}
 }
 
@@ -84,7 +84,7 @@ func (c *ServerClient) LoginNode(nk, wgPrivKey string) (*login.LoginNodeResponse
 		cidr = res.Cidr
 	}
 
-	c.runelog.Logger.Infof("runetale ip => [%s/%s]", ip, cidr)
+	c.log.Logger.Infof("runetale ip => [%s/%s]", ip, cidr)
 
 	return res, nil
 }
@@ -103,13 +103,13 @@ func (c *ServerClient) loginBySession(nk, url string) (string, string, error) {
 	return msg.Ip, msg.Cidr, nil
 }
 
-func (c *ServerClient) ComposeNode(token, nk, wgPrivKey string) (*node.ComposeNodeResponse, error) {
+func (c *ServerClient) ComposeNode(composeKey, nk, wgPrivKey string) (*node.ComposeNodeResponse, error) {
 	parsedKey, err := wgtypes.ParseKey(wgPrivKey)
 	if err != nil {
 		return nil, err
 	}
 
-	md := metadata.New(map[string]string{utils.AccessToken: token, utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
+	md := metadata.New(map[string]string{utils.ComposeKey: composeKey, utils.NodeKey: nk, utils.WgPubKey: parsedKey.PublicKey().String(), utils.HostName: c.sysInfo.Hostname, utils.OS: c.sysInfo.OS})
 	ctx := metadata.NewOutgoingContext(c.ctx, md)
 
 	res, err := c.nodeClient.ComposeNode(ctx, &emptypb.Empty{})
@@ -139,7 +139,7 @@ func (c *ServerClient) ConnectLoginSession(nk string) (*login.LoginSessionRespon
 	}
 
 	sessionid := getLoginSessionID(header)
-	c.runelog.Logger.Debugf("sessionid: [%s]", sessionid)
+	c.log.Logger.Debugf("sessionid: [%s]", sessionid)
 
 	for {
 		msg, err = stream.Recv()

@@ -10,8 +10,8 @@ import (
 	"fmt"
 
 	"github.com/peterbourgon/ff/v2/ffcli"
+	"github.com/runetale/runetale/log"
 	"github.com/runetale/runetale/paths"
-	"github.com/runetale/runetale/runelog"
 )
 
 // TODO: (shinta) close unix domain socket, system resouce handler, etc.
@@ -29,7 +29,7 @@ var downCmd = &ffcli.Command{
 	FlagSet: (func() *flag.FlagSet {
 		fs := flag.NewFlagSet("down", flag.ExitOnError)
 		fs.StringVar(&downArgs.logFile, "logfile", paths.DefaultClientLogFile(), "set logfile path")
-		fs.StringVar(&downArgs.logLevel, "loglevel", runelog.InfoLevelStr, "set log level")
+		fs.StringVar(&downArgs.logLevel, "loglevel", log.InfoLevelStr, "set log level")
 		fs.BoolVar(&downArgs.debug, "debug", false, "is debug")
 		return fs
 	})(),
@@ -37,7 +37,7 @@ var downCmd = &ffcli.Command{
 }
 
 func execDown(ctx context.Context, args []string) error {
-	_, err := runelog.NewRunelog("runetale up", downArgs.logLevel, downArgs.logFile, downArgs.debug)
+	_, err := log.NewLogger("runetale up", downArgs.logLevel, downArgs.logFile, downArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v", err)
 		return nil
