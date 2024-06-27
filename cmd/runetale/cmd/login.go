@@ -12,8 +12,8 @@ import (
 
 	"github.com/peterbourgon/ff/v2/ffcli"
 	"github.com/runetale/runetale/conf"
+	"github.com/runetale/runetale/log"
 	"github.com/runetale/runetale/paths"
-	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/types/flagtype"
 )
 
@@ -42,7 +42,7 @@ var loginCmd = &ffcli.Command{
 		fs.StringVar(&loginArgs.signalHost, "signal-host", "https://signal.caterpie.runetale.com", "signal server host")
 		fs.Int64Var(&loginArgs.signalPort, "signal-port", flagtype.DefaultSignalingServerPort, "signal server port")
 		fs.StringVar(&loginArgs.logFile, "logfile", paths.DefaultClientLogFile(), "set logfile path")
-		fs.StringVar(&loginArgs.logLevel, "loglevel", runelog.InfoLevelStr, "set log level")
+		fs.StringVar(&loginArgs.logLevel, "loglevel", log.InfoLevelStr, "set log level")
 		fs.BoolVar(&loginArgs.debug, "debug", false, "for debug logging")
 		return fs
 	})(),
@@ -50,7 +50,7 @@ var loginCmd = &ffcli.Command{
 }
 
 func execLogin(ctx context.Context, args []string) error {
-	runelog, err := runelog.NewRunelog("runetale login", loginArgs.logLevel, loginArgs.logFile, loginArgs.debug)
+	logger, err := log.NewLogger("runetale login", loginArgs.logLevel, loginArgs.logFile, loginArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger. because %v\n", err)
 		return nil
@@ -64,7 +64,7 @@ func execLogin(ctx context.Context, args []string) error {
 		loginArgs.debug,
 		loginArgs.serverHost, uint(loginArgs.serverPort),
 		loginArgs.signalHost, uint(loginArgs.signalPort),
-		runelog,
+		logger,
 	)
 	if err != nil {
 		fmt.Printf("failed to create client conf, because %s\n", err.Error())
@@ -77,7 +77,7 @@ func execLogin(ctx context.Context, args []string) error {
 		return err
 	}
 
-	runelog.Logger.Debugf("runetale ip => [%s/%s]", ip, cidr)
+	logger.Logger.Debugf("runetale ip => [%s/%s]", ip, cidr)
 
 	return nil
 }

@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 	"github.com/runetale/runetale/tun"
 	"github.com/runetale/runetale/types/key"
 	"github.com/runetale/runetale/utils"
@@ -34,7 +34,7 @@ type Spec struct {
 	path    string
 	isDebug bool
 
-	runelog *runelog.Runelog
+	log *log.Logger
 }
 
 func NewSpec(
@@ -42,7 +42,7 @@ func NewSpec(
 	serverHost string, serverPort uint,
 	signalHost string, signalPort uint,
 	isDebug bool,
-	dl *runelog.Runelog,
+	dl *log.Logger,
 ) (*Spec, error) {
 	return &Spec{
 		ServerHost: serverHost,
@@ -51,7 +51,7 @@ func NewSpec(
 		SignalPort: signalPort,
 		path:       path,
 		isDebug:    isDebug,
-		runelog:    dl,
+		log:        dl,
 	}, nil
 }
 
@@ -65,7 +65,7 @@ func (s *Spec) writeSpec(
 	presharedKey string,
 ) *Spec {
 	if err := os.MkdirAll(filepath.Dir(s.path), 0755); err != nil {
-		s.runelog.Logger.Warnf("failed to create directory with %s, because %s", s.path, err.Error())
+		s.log.Logger.Warnf("failed to create directory with %s, because %s", s.path, err.Error())
 	}
 
 	s.ServerHost = serverHost
@@ -94,7 +94,7 @@ func (s *Spec) CreateSpec() *Spec {
 	case errors.Is(err, os.ErrNotExist):
 		privKey, err := key.NewGenerateKey()
 		if err != nil {
-			s.runelog.Logger.Error("failed to generate key for wireguard")
+			s.log.Logger.Error("failed to generate key for wireguard")
 			panic(err)
 		}
 
@@ -109,12 +109,12 @@ func (s *Spec) CreateSpec() *Spec {
 			"",
 		)
 	case err != nil:
-		s.runelog.Logger.Errorf("%s could not be read. exception error: %s", s.path, err.Error())
+		s.log.Logger.Errorf("%s could not be read. exception error: %s", s.path, err.Error())
 		panic(err)
 	default:
 		var spec Spec
 		if err := json.Unmarshal(b, &spec); err != nil {
-			s.runelog.Logger.Warnf("can not read client config file, because %v", err)
+			s.log.Logger.Warnf("can not read client config file, because %v", err)
 		}
 
 		var serverhost string
@@ -155,11 +155,9 @@ func (s *Spec) GetClientConf() (*Spec, error) {
 	}
 
 	if err := json.Unmarshal(b, &spec); err != nil {
-		s.runelog.Logger.Warnf("can not read client config file, because %v", err)
+		s.log.Logger.Warnf("can not read client config file, because %v", err)
 		return nil, err
 	}
-
-	s.runelog = s.runelog
 
 	return &spec, nil
 }

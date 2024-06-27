@@ -10,18 +10,20 @@ package controlplane
 //
 
 import (
+	"errors"
 	"strings"
 	"sync"
 
 	"github.com/pion/ice/v2"
+	"github.com/pion/stun"
 	"github.com/runetale/client-go/runetale/runetale/v1/negotiation"
 	"github.com/runetale/client-go/runetale/runetale/v1/node"
 	"github.com/runetale/runetale/backoff"
 	"github.com/runetale/runetale/client/grpc"
 	"github.com/runetale/runetale/conf"
-	"github.com/runetale/runetale/rcn/rcnsock"
-	"github.com/runetale/runetale/rcn/webrtc"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
+	"github.com/runetale/runetale/rnengine/wonderwall/rcnsock"
+	"github.com/runetale/runetale/rnengine/wonderwall/webrtc"
 	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
@@ -42,7 +44,7 @@ type ControlPlane struct {
 	ch                  chan struct{}
 	waitForRemoteConnCh chan *webrtc.Ice
 
-	runelog *runelog.Runelog
+	log *log.Logger
 }
 
 func NewControlPlane(
@@ -52,7 +54,7 @@ func NewControlPlane(
 	nk string,
 	conf *conf.Conf,
 	ch chan struct{},
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) *ControlPlane {
 	return &ControlPlane{
 		signalClient: signalClient,
@@ -68,23 +70,23 @@ func NewControlPlane(
 		ch:                  ch,
 		waitForRemoteConnCh: make(chan *webrtc.Ice),
 
-		runelog: runelog,
+		log: logger,
 	}
 }
 
-func (c *ControlPlane) parseStun(url, uname, pw string) (*ice.URL, error) {
-	stun, err := ice.ParseURL(url)
+func (c *ControlPlane) parseStun(url, uname, pw string) (*stun.URI, error) {
+	s, err := stun.ParseURI(url)
 	if err != nil {
 		return nil, err
 	}
 
-	stun.Username = uname
-	stun.Password = pw
-	return stun, err
+	s.Username = uname
+	s.Password = pw
+	return s, err
 }
 
-func (c *ControlPlane) parseTurn(url, uname, pw string) (*ice.URL, error) {
-	turn, err := ice.ParseURL(url)
+func (c *ControlPlane) parseTurn(url, uname, pw string) (*stun.URI, error) {
+	turn, err := stun.ParseURI(url)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +130,8 @@ func (c *ControlPlane) ConfigureStunTurnConf() error {
 	return nil
 }
 
+// SyncRemoteNodesで取得したNodeをベースにiceを作っている
+// Signal Process
 func (c *ControlPlane) receiveSignalRequest(
 	remotenk string,
 	msgType negotiation.NegotiationType,
@@ -136,6 +140,8 @@ func (c *ControlPlane) receiveSignalRequest(
 	pwd string,
 	candidate string,
 ) error {
+	// signalリクエストが来たタイミングで
+	// w.peerConns[remotenk]を使ってSendする
 	switch msgType {
 	case negotiation.NegotiationType_ANSWER:
 		dstNode.SendRemoteAnswerCh(remotenk, uname, pwd)
@@ -144,14 +150,16 @@ func (c *ControlPlane) receiveSignalRequest(
 	case negotiation.NegotiationType_CANDIDATE:
 		candidate, err := ice.UnmarshalCandidate(candidate)
 		if err != nil {
-			c.runelog.Logger.Errorf("can not unmarshal candidate => [%s]", candidate)
+			c.log.Logger.Errorf("can not unmarshal candidate => [%s]", candidate)
 			return err
 		}
 		dstNode.SendRemoteCandidate(candidate)
+
+	// Joinした時にSignal ServerからNodeに伝えるための通知
 	case negotiation.NegotiationType_JOIN:
 		err := c.offerToRemotePeer()
 		if err != nil {
-			c.runelog.Logger.Errorf("failed to sync remote nodes")
+			c.log.Logger.Errorf("failed to sync remote nodes")
 			return err
 		}
 	}
@@ -199,7 +207,7 @@ func (c *ControlPlane) ConnectSignalServer() {
 }
 
 // keep the latest state of Peers received from the server
-func (c *ControlPlane) syncRemoteNode(remotePeers []*node.Node) error {
+func (c *ControlPlane) resyncRemoteNode(remotePeers []*node.Node) error {
 	remotePeerMap := make(map[string]struct{})
 	for _, p := range remotePeers {
 		remotePeerMap[p.GetRemoteNodeKey()] = struct{}{}
@@ -222,10 +230,10 @@ func (c *ControlPlane) syncRemoteNode(remotePeers []*node.Node) error {
 			delete(c.peerConns, p)
 			conn.Cleanup()
 		}
-		c.runelog.Logger.Debugf("there are no peers, even though there should be")
+		c.log.Logger.Debugf("there are no peers, even though there should be")
 	}
 
-	c.runelog.Logger.Debugf("completed nodes delete in control plane => %v", unnecessary)
+	c.log.Logger.Debugf("completed nodes delete in control plane => %v", unnecessary)
 	return nil
 }
 
@@ -248,7 +256,6 @@ func (c *ControlPlane) newIce(node *node.Node, myip, mycidr string) (*webrtc.Ice
 	i := webrtc.NewIce(
 		c.signalClient,
 		c.serverClient,
-		c.sock,
 		node.GetRemoteWgPubKey(),
 		remoteip,
 		node.GetRemoteNodeKey(),
@@ -261,7 +268,7 @@ func (c *ControlPlane) newIce(node *node.Node, myip, mycidr string) (*webrtc.Ice
 		c.nk,
 		c.stconf,
 		c.conf.Spec.BlackList,
-		c.runelog,
+		c.log,
 		c.ch,
 	)
 
@@ -280,21 +287,21 @@ func (c *ControlPlane) WaitForRemoteConn() {
 		select {
 		case ice := <-c.waitForRemoteConnCh:
 			if !c.signalClient.IsReady() || !c.isExistPeer(ice.GetRemoteNodeKey()) {
-				c.runelog.Logger.Errorf("signal client is not available, execute loop. applicable remote node => [%s]", ice.GetRemoteNodeKey())
+				c.log.Logger.Errorf("signal client is not available, execute loop. applicable remote node => [%s]", ice.GetRemoteNodeKey())
 				continue
 			}
 
-			c.runelog.Logger.Debugf("starting gathering process for remote node => [%s]", ice.GetRemoteNodeKey())
+			c.log.Logger.Debugf("starting gathering process for remote node => [%s]", ice.GetRemoteNodeKey())
 
 			err := ice.Setup()
 			if err != nil {
-				c.runelog.Logger.Errorf("failed to configure gathering process for [%s]", ice.GetRemoteNodeKey())
+				c.log.Logger.Errorf("failed to configure gathering process for [%s]", ice.GetRemoteNodeKey())
 				continue
 			}
 
 			err = ice.StartGatheringProcess()
 			if err != nil {
-				c.runelog.Logger.Errorf("failed to start gathering process for [%s]", ice.GetRemoteNodeKey())
+				c.log.Logger.Errorf("failed to start gathering process for [%s]", ice.GetRemoteNodeKey())
 				continue
 			}
 		}
@@ -312,10 +319,10 @@ func (c *ControlPlane) Close() error {
 			return err
 		}
 
-		c.runelog.Logger.Debugf("close the %s", nk)
+		c.log.Logger.Debugf("close the %s", nk)
 	}
 
-	c.runelog.Logger.Debugf("finished in closing the control plane")
+	c.log.Logger.Debugf("finished in closing the control plane")
 
 	return nil
 }
@@ -324,9 +331,9 @@ func (c *ControlPlane) ConnectSock(ip, cidr string) {
 	go func() {
 		err := c.sock.Connect(c.signalClient, ip, cidr)
 		if err != nil {
-			c.runelog.Logger.Errorf("failed connect rcn sock, %s", err.Error())
+			c.log.Logger.Errorf("failed connect rcn sock, %s", err.Error())
 		}
-		c.runelog.Logger.Debugf("rcn sock connect has been disconnected")
+		c.log.Logger.Debugf("rcn sock connect has been disconnected")
 	}()
 }
 
@@ -364,18 +371,16 @@ func (c *ControlPlane) offerToRemotePeer() error {
 			return nil
 		}
 
-		err = c.syncRemoteNode(res.GetRemoteNodes())
+		err = c.resyncRemoteNode(res.GetRemoteNodes())
 		if err != nil {
 			return err
 		}
 
 		for _, remoteNode := range res.GetRemoteNodes() {
-			i, err := c.newIce(remoteNode, res.Ip, res.Cidr)
-			if err != nil {
-				return err
+			i := c.peerConns[remoteNode.GetRemoteNodeKey()]
+			if i == nil {
+				return errors.New("not found peerConns")
 			}
-
-			c.peerConns[remoteNode.GetRemoteNodeKey()] = i
 			c.waitForRemoteConnCh <- i
 		}
 

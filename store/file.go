@@ -16,8 +16,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/runetale/runetale/log"
 	"github.com/runetale/runetale/paths"
-	"github.com/runetale/runetale/runelog"
 	"github.com/runetale/runetale/utils"
 )
 
@@ -27,14 +27,14 @@ type FileStoreManager interface {
 }
 
 type FileStore struct {
-	path    string
-	cache   map[StateKey][]byte
-	runelog *runelog.Runelog
+	path   string
+	cache  map[StateKey][]byte
+	logger *log.Logger
 
 	mu sync.RWMutex
 }
 
-func NewFileStore(path string, runelog *runelog.Runelog) (*FileStore, error) {
+func NewFileStore(path string, logger *log.Logger) (*FileStore, error) {
 	if err := paths.MkStateDir(filepath.Dir(path)); err != nil {
 		return nil, fmt.Errorf("does not creating state directory: %w", err)
 	}
@@ -54,9 +54,9 @@ func NewFileStore(path string, runelog *runelog.Runelog) (*FileStore, error) {
 	}
 
 	fs := &FileStore{
-		path:    path,
-		cache:   make(map[StateKey][]byte),
-		runelog: runelog,
+		path:   path,
+		cache:  make(map[StateKey][]byte),
+		logger: logger,
 	}
 
 	if err := json.Unmarshal(b, &fs.cache); err != nil {

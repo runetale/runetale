@@ -7,13 +7,13 @@ package grpc
 import (
 	"crypto/tls"
 
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func NewGrpcDialOption(runelog *runelog.Runelog, isdebug bool) grpc.DialOption {
+func NewGrpcDialOption(log *log.Logger, isdebug bool) grpc.DialOption {
 	var option grpc.DialOption
 	if isdebug {
 		option = grpc.WithTransportCredentials(insecure.NewCredentials())

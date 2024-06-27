@@ -7,12 +7,11 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/peterbourgon/ff/v2/ffcli"
 	"github.com/runetale/runetale/daemon"
 	dd "github.com/runetale/runetale/daemon/runetaled"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 )
 
 var statusArgs struct {
@@ -36,9 +35,8 @@ var statusDaemonCmd = &ffcli.Command{
 }
 
 func statusDaemon(ctx context.Context, args []string) error {
-	runelog, err := runelog.NewRunelog("runetaled status", statusArgs.logLevel, statusArgs.logFile, statusArgs.debug)
+	runelog, err := log.NewLogger("runetaled status", statusArgs.logLevel, statusArgs.logFile, statusArgs.debug)
 	if err != nil {
-		log.Fatalf("failed to initialize logger: %v", err)
 		return err
 	}
 

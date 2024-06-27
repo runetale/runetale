@@ -12,8 +12,8 @@ import (
 	"github.com/peterbourgon/ff/v2/ffcli"
 	"github.com/runetale/runetale/daemon"
 	dd "github.com/runetale/runetale/daemon/runetaled"
+	"github.com/runetale/runetale/log"
 	"github.com/runetale/runetale/paths"
-	"github.com/runetale/runetale/runelog"
 )
 
 var daemonArgs struct {
@@ -30,7 +30,7 @@ var daemonCmd = &ffcli.Command{
 	FlagSet: (func() *flag.FlagSet {
 		fs := flag.NewFlagSet("up", flag.ExitOnError)
 		fs.StringVar(&daemonArgs.logFile, "logfile", paths.DefaultClientLogFile(), "set logfile path")
-		fs.StringVar(&daemonArgs.logLevel, "loglevel", runelog.InfoLevelStr, "set log level")
+		fs.StringVar(&daemonArgs.logLevel, "loglevel", log.InfoLevelStr, "set log level")
 		fs.BoolVar(&daemonArgs.debug, "debug", false, "is debug")
 		return fs
 	})(),
@@ -48,13 +48,13 @@ var installDaemonCmd = &ffcli.Command{
 }
 
 func installDaemon(ctx context.Context, args []string) error {
-	runelog, err := runelog.NewRunelog("runetaled daemon", daemonArgs.logLevel, daemonArgs.logFile, daemonArgs.debug)
+	logger, err := log.NewLogger("runetaled daemon", daemonArgs.logLevel, daemonArgs.logFile, daemonArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v", err)
 		return nil
 	}
 
-	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, runelog)
+	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, logger)
 	err = d.Install()
 	if err != nil {
 		return err
@@ -71,13 +71,13 @@ var uninstallDaemonCmd = &ffcli.Command{
 }
 
 func uninstallDaemon(ctx context.Context, args []string) error {
-	runelog, err := runelog.NewRunelog("runetaled daemon", daemonArgs.logLevel, daemonArgs.logFile, daemonArgs.debug)
+	logger, err := log.NewLogger("runetaled daemon", daemonArgs.logLevel, daemonArgs.logFile, daemonArgs.debug)
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v", err)
 		return nil
 	}
 
-	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, runelog)
+	d := daemon.NewDaemon(dd.BinPath, dd.ServiceName, dd.DaemonFilePath, dd.SystemConfig, logger)
 	err = d.Uninstall()
 	if err != nil {
 		return err

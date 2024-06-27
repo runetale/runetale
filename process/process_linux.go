@@ -5,27 +5,26 @@
 package process
 
 import (
+	"log"
 	"os/exec"
-
-	"github.com/runetale/runetale/runelog"
 )
 
 type runetaledProcessOnLinux struct {
-	runelog *runelog.Runelog
+	logger *log.Logger
 }
 
 func newProcess(
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 ) Process {
 	return &runetaledProcessOnLinux{
-		runelog: runelog,
+		logger: logger,
 	}
 }
 
 func (d *runetaledProcessOnLinux) GetRunetaledProcess() bool {
 	cmd := exec.Command("pgrep", "runetaled")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		d.runelog.Logger.Errorf("Command: %v failed with output %s and error: %v", cmd.String(), out, err)
+		d.log.log.Errorf("Command: %v failed with output %s and error: %v", cmd.String(), out, err)
 		return false
 	}
 	return true

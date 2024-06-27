@@ -9,6 +9,7 @@ package webrtc
 //
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -17,11 +18,11 @@ import (
 	"github.com/pion/ice/v2"
 	"github.com/runetale/runetale/backoff"
 	"github.com/runetale/runetale/client/grpc"
-	"github.com/runetale/runetale/iface"
-	"github.com/runetale/runetale/rcn/conn"
-	"github.com/runetale/runetale/rcn/proxy"
-	"github.com/runetale/runetale/rcn/rcnsock"
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
+	"github.com/runetale/runetale/rnengine/wonderwall/proxy"
+	"github.com/runetale/runetale/rnengine/wonderwall/rcnsock"
+	"github.com/runetale/runetale/runecfg"
+	"github.com/runetale/runetale/wg"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
@@ -33,7 +34,7 @@ type Ice struct {
 
 	sigexec *SigExecuter
 
-	conn *conn.Conn
+	updateEndpointFunc func(runecfg.Endpoint)
 
 	wireproxy *proxy.WireProxy
 
@@ -74,13 +75,13 @@ type Ice struct {
 
 	failedTimeout *time.Duration
 
-	runelog *runelog.Runelog
+	log *log.Logger
 }
 
 func NewIce(
 	signalClient grpc.SignalClientImpl,
 	serverClient grpc.ServerClientImpl,
-	sock *rcnsock.RcnSock,
+	updateEndpointFunc func(runecfg.Endpoint),
 
 	remoteWgPubKey string,
 	remoteip string,
@@ -97,7 +98,7 @@ func NewIce(
 	stunTurn *StunTurnConfig,
 	blacklist []string,
 
-	runelog *runelog.Runelog,
+	logger *log.Logger,
 
 	closeCh chan struct{},
 ) *Ice {
@@ -106,7 +107,7 @@ func NewIce(
 		signalClient: signalClient,
 		serverClient: serverClient,
 
-		sock: sock,
+		updateEndpointFunc: updateEndpointFunc,
 
 		remoteOfferCh:  make(chan Credentials),
 		remoteAnswerCh: make(chan Credentials),
@@ -133,7 +134,7 @@ func NewIce(
 
 		failedTimeout: &failedtimeout,
 
-		runelog: runelog,
+		log: logger,
 	}
 }
 
@@ -144,7 +145,7 @@ func (i *Ice) Setup() (err error) {
 
 	// configure sigexe
 	//
-	i.sigexec = NewSigExecuter(i.signalClient, i.remoteNodeKey, i.nk, i.runelog)
+	i.sigexec = NewSigExecuter(i.signalClient, i.remoteNodeKey, i.nk, i.log)
 
 	// configure ice agent
 	i.udpMuxConn, err = net.ListenUDP("udp4", &net.UDPAddr{Port: 0})
@@ -184,60 +185,56 @@ func (i *Ice) Setup() (err error) {
 	}
 
 	// configure iface
-	iface := iface.NewIface(i.wgIface, i.wgPrivKey.String(), i.ip, i.cidr, i.runelog)
+	// iface := iface.NewIface(i.wgIface, i.wgPrivKey.String(), i.ip, i.cidr, i.log)
 
 	// configure wire proxy
-	wireproxy := proxy.NewWireProxy(
-		iface,
-		i.remoteWgPubKey,
-		i.remoteIp,
-		i.wgIface,
-		fmt.Sprintf("127.0.0.1:%d", i.wgPort),
-		i.preSharedKey,
-		i.runelog,
-		i.agent,
-	)
+	// wireproxy := proxy.NewWireProxy(
+	// 	iface,
+	// 	i.remoteWgPubKey,
+	// 	i.remoteIp,
+	// 	i.wgIface,
+	// 	fmt.Sprintf("127.0.0.1:%d", i.wgPort),
+	// 	i.preSharedKey,
+	// 	i.log,
+	// 	i.agent,
+	// )
 
-	i.wireproxy = wireproxy
+	// i.wireproxy = wireproxy
 
 	return nil
 }
 
-// TODO: (shinta)
-// more detailed handling is needed.
-// by handling failures, we need to establish a connection path using DoubleNat? or
-// Ether(call me エーテル) when a connection cannot be made.
 func (i *Ice) IceConnectionHasBeenChanged(state ice.ConnectionState) {
 	switch state {
 	case ice.ConnectionStateNew: // ConnectionStateNew ICE agent is gathering addresses
-		i.runelog.Logger.Infof("new connections collected, [%s]", state.String())
+		i.log.Logger.Infof("new connections collected, [%s]", state.String())
 	case ice.ConnectionStateChecking: // ConnectionStateNew ICE agent is gathering addresses
-		i.runelog.Logger.Infof("checking agent state, [%s]", state.String())
+		i.log.Logger.Infof("checking agent state, [%s]", state.String())
 	case ice.ConnectionStateConnected: // ConnectionStateConnected ICE agent has a pairing, but is still checking other pairs
-		i.runelog.Logger.Infof("agent [%s]", state.String())
+		i.log.Logger.Infof("agent [%s]", state.String())
 	case ice.ConnectionStateCompleted: // ConnectionStateConnected ICE agent has a pairing, but is still checking other pairs
 		err := i.signalClient.Connected()
 		if err != nil {
-			i.runelog.Logger.Errorf("the agent connection was successful but I received an error in the function that updates the status to connect, [%s]", state.String())
+			i.log.Logger.Errorf("the agent connection was successful but I received an error in the function that updates the status to connect, [%s]", state.String())
 		}
-		i.runelog.Logger.Infof("successfully connected to agent, [%s]", state.String())
+		i.log.Logger.Infof("successfully connected to agent, [%s]", state.String())
 	case ice.ConnectionStateFailed: // ConnectionStateFailed ICE agent never could successfully connect
 		err := i.signalClient.DisConnected()
 		if err != nil {
-			i.runelog.Logger.Errorf("agent connection failed, but failed to set the connection state to disconnect, [%s]", state.String())
+			i.log.Logger.Errorf("agent connection failed, but failed to set the connection state to disconnect, [%s]", state.String())
 		}
 	case ice.ConnectionStateDisconnected: // ConnectionStateDisconnected ICE agent connected successfully, but has entered a failed state
 		err := i.signalClient.DisConnected()
 		if err != nil {
-			i.runelog.Logger.Errorf("agent connected successfully, but has entered a failed state, [%s]", state.String())
+			i.log.Logger.Errorf("agent connected successfully, but has entered a failed state, [%s]", state.String())
 		}
 	case ice.ConnectionStateClosed: // ConnectionStateClosed ICE agent has finished and is no longer handling requests
-		i.runelog.Logger.Infof("agent has finished and is no longer handling requests, [%s]", state.String())
+		i.log.Logger.Infof("agent has finished and is no longer handling requests, [%s]", state.String())
 	}
 }
 
 func (i *Ice) IceSelectedHasCandidatePairChanged(local ice.Candidate, remote ice.Candidate) {
-	i.runelog.Logger.Infof("[CANDIDATE COMPLETED] agent candidates were found, local:[%s] <-> remote:[%s]", local.Address(), remote.Address())
+	i.log.Logger.Infof("[CANDIDATE COMPLETED] agent candidates were found, local:[%s] <-> remote:[%s]", local.Address(), remote.Address())
 }
 
 func (i *Ice) GetRemoteNodeKey() string {
@@ -267,44 +264,44 @@ func (i *Ice) getBlackListWithInterfaceFilter() func(string) bool {
 }
 
 func (i *Ice) closeIceAgent() error {
-	i.runelog.Logger.Debugf("starting close ice agent process")
+	i.log.Logger.Debugf("starting close ice agent process")
 
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
 	err := i.udpMux.Close()
 	if err != nil {
-		i.runelog.Logger.Debugf("failed to close udp mux")
+		i.log.Logger.Debugf("failed to close udp mux")
 		return err
 	}
 
 	err = i.udpMuxSrflx.Close()
 	if err != nil {
-		i.runelog.Logger.Debugf("failed to close udp mux srflx")
+		i.log.Logger.Debugf("failed to close udp mux srflx")
 		return err
 	}
 
 	err = i.udpMuxConn.Close()
 	if err != nil {
-		i.runelog.Logger.Debugf("failed to close udp mux conn")
+		i.log.Logger.Debugf("failed to close udp mux conn")
 		return err
 	}
 
 	err = i.udpMuxConnSrflx.Close()
 	if err != nil {
-		i.runelog.Logger.Debugf("failed to close udp mux conn srlfx")
+		i.log.Logger.Debugf("failed to close udp mux conn srlfx")
 		return err
 	}
 
 	err = i.agent.Close()
 	if err != nil {
-		i.runelog.Logger.Debugf("failed to close udp mux conn srlfx")
+		i.log.Logger.Debugf("failed to close udp mux conn srlfx")
 		return err
 	}
 
 	i.signalClient.DisConnected()
 
-	i.runelog.Logger.Debugf("completed clean ice agent process")
+	i.log.Logger.Debugf("completed clean ice agent process")
 
 	return nil
 }
@@ -322,13 +319,14 @@ func (i *Ice) getLocalUserIceAgentCredentials() (string, string, error) {
 func (i *Ice) StartGatheringProcess() error {
 	// must be done asynchronously, separately from SignalOffer,
 	// as it requires waiting for a connection channel from the other peers
-	go i.WaitingRemotePeerConnections()
+	// NodeからのAnswerを待つ
+	go i.waitingRemotePeerConnections()
 
 	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3)
 	operation := func() error {
 		err := i.signalOffer()
 		if err != nil {
-			i.runelog.Logger.Debugf("retrying signal offer")
+			i.log.Logger.Debugf("retrying signal offer")
 			return err
 		}
 		return nil
@@ -341,44 +339,7 @@ func (i *Ice) StartGatheringProcess() error {
 	return nil
 }
 
-func (i *Ice) startConn(uname, pwd string) error {
-	i.conn = conn.NewConn(
-		i.agent,
-		uname,
-		pwd,
-		i.wireproxy,
-		i.remoteWgPubKey,
-		i.wgPubKey,
-		i.runelog,
-	)
-
-	err := i.conn.Start()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (i *Ice) CloseConn() error {
-	if i.conn != nil {
-		err := i.conn.Close()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (i *Ice) Cleanup() error {
-	if i.conn != nil {
-		err := i.conn.Close()
-		if err != nil {
-			return err
-		}
-	}
-
 	err := i.CloseIce()
 	if err != nil {
 		return err
@@ -398,39 +359,83 @@ func (i *Ice) CloseIce() error {
 
 // when the offer and answer come in, gather the agent's candidates and collect the process.
 // then if there are no errors, go establish a connection
-func (i *Ice) WaitingRemotePeerConnections() error {
+func (i *Ice) waitingRemotePeerConnections() error {
 	var credentials Credentials
 	for {
 		select {
 		case credentials = <-i.remoteAnswerCh:
-			i.runelog.Logger.Infof("receive credentials from [%s]", i.remoteNodeKey)
+			i.log.Logger.Infof("receive credentials from [%s]", i.remoteNodeKey)
 		case credentials = <-i.remoteOfferCh:
-			i.runelog.Logger.Infof("receive offer from [%s]", i.remoteNodeKey)
+			i.log.Logger.Infof("receive offer from [%s]", i.remoteNodeKey)
 			err := i.signalAnswer()
 			if err != nil {
-				i.runelog.Logger.Errorf("failed to signal answer, %s", err.Error())
+				i.log.Logger.Errorf("failed to signal answer, %s", err.Error())
 				return err
 			}
-			// return nil
+			return nil
 		}
 
 		err := i.agent.GatherCandidates()
 		if err != nil {
-			i.runelog.Logger.Errorf("failed to gather candidates, %s", err.Error())
+			i.log.Logger.Errorf("failed to gather candidates, %s", err.Error())
 			return err
 		}
 
-		err = i.startConn(credentials.UserName, credentials.Pwd)
+		// get remoteconn
+		var remoteConn *ice.Conn
+		ctx := context.Background()
+		if i.wgPubKey < i.remoteWgPubKey {
+			remoteConn, err = i.agent.Dial(ctx, credentials.UserName, credentials.Pwd)
+			if err != nil {
+				i.log.Logger.Errorf("failed to dial agent")
+				return err
+			}
+			i.log.Logger.Infof("completed dial agent")
+		} else {
+			remoteConn, err = i.agent.Accept(ctx, credentials.UserName, credentials.Pwd)
+			if err != nil {
+				i.log.Logger.Errorf("failed to accept agent")
+				return err
+			}
+			i.log.Logger.Infof("completed accept agent")
+		}
+
+		udpAddr, err := net.ResolveUDPAddr("udp", remoteConn.RemoteAddr().String())
 		if err != nil {
-			i.runelog.Logger.Errorf("failed to start conn, %s", err.Error())
 			return err
 		}
+		udpAddr.Port = wg.WgPort
+
+		// get relaytype
+		var endpointType runecfg.EndpointType
+		pair, err := i.agent.GetSelectedCandidatePair()
+		if err != nil {
+			return err
+		}
+
+		if isRelayCandidate(pair.Local) {
+			endpointType = runecfg.EndpointLocal
+		} else {
+			endpointType = runecfg.EndpointSTUN
+		}
+
+		ep := runecfg.Endpoint{
+			Addr: udpAddr.AddrPort(),
+			Type: endpointType,
+		}
+
+		// update endpoint
+		i.updateEndpointFunc(ep)
 
 		_, err = i.serverClient.Connect(i.nk)
 		if err != nil {
 			return err
 		}
 	}
+}
+
+func isRelayCandidate(candidate ice.Candidate) bool {
+	return candidate.Type() == ice.CandidateTypeRelay
 }
 
 func (i *Ice) signalAnswer() error {
@@ -447,7 +452,7 @@ func (i *Ice) signalAnswer() error {
 		return err
 	}
 
-	i.runelog.Logger.Infof(fmt.Sprintf("send answer to [%s]", i.remoteNodeKey))
+	i.log.Logger.Infof(fmt.Sprintf("send answer to [%s]", i.remoteNodeKey))
 
 	return nil
 }
@@ -472,18 +477,18 @@ func (i *Ice) signalOffer() error {
 func (i *Ice) SendRemoteOfferCh(remotemk, uname, pwd string) {
 	select {
 	case i.remoteOfferCh <- *NewCredentials(uname, pwd):
-		i.runelog.Logger.Infof("send offer to [%s]", remotemk)
+		i.log.Logger.Infof("send offer to [%s]", remotemk)
 	default:
-		i.runelog.Logger.Infof("%s agent waitForSignalingProcess does not seem to have been started", remotemk)
+		i.log.Logger.Infof("%s agent waitForSignalingProcess does not seem to have been started", remotemk)
 	}
 }
 
 func (i *Ice) SendRemoteAnswerCh(remotemk, uname, pwd string) {
 	select {
 	case i.remoteAnswerCh <- *NewCredentials(uname, pwd):
-		i.runelog.Logger.Infof("send answer to [%s]", i.remoteNodeKey)
+		i.log.Logger.Infof("send answer to [%s]", i.remoteNodeKey)
 	default:
-		i.runelog.Logger.Infof("answer skipping message to %s", remotemk)
+		i.log.Logger.Infof("answer skipping message to %s", remotemk)
 	}
 }
 
@@ -493,16 +498,16 @@ func (i *Ice) SendRemoteCandidate(candidate ice.Candidate) {
 		defer i.mu.Unlock()
 
 		if i.agent == nil {
-			i.runelog.Logger.Debugf("agent is nil")
+			i.log.Logger.Debugf("agent is nil")
 			return
 		}
 
 		err := i.agent.AddRemoteCandidate(candidate)
 		if err != nil {
-			i.runelog.Logger.Errorf("cannot add remote candidate")
+			i.log.Logger.Errorf("cannot add remote candidate")
 			return
 		}
 
-		i.runelog.Logger.Infof("send candidate to [%s]", i.remoteNodeKey)
+		i.log.Logger.Infof("send candidate to [%s]", i.remoteNodeKey)
 	}()
 }

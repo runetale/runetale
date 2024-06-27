@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/runetale/runetale/runelog"
+	"github.com/runetale/runetale/log"
 )
 
 type upstartRecord struct {
@@ -21,13 +21,13 @@ type upstartRecord struct {
 	// daemon system config
 	systemConfig string
 
-	runelog *runelog.Runelog
+	log *log.Logger
 }
 
 func (d *upstartRecord) Install() (err error) {
 	defer func() {
 		if os.Getuid() != 0 && err != nil {
-			d.runelog.Logger.Errorf("run it again with sudo privileges: %s", err.Error())
+			d.log.Logger.Errorf("run it again with sudo privileges: %s", err.Error())
 			err = fmt.Errorf("run it again with sudo privileges: %s", err.Error())
 		}
 	}()

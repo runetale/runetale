@@ -4,16 +4,18 @@
 
 package webrtc
 
-import "github.com/pion/ice/v2"
+import (
+	"github.com/pion/stun"
+)
 
 type StunTurnConfig struct {
-	Stun *ice.URL
-	Turn *ice.URL
+	Stun *stun.URI
+	Turn *stun.URI
 }
 
 func NewStunTurnConfig(
-	stun *ice.URL,
-	turn *ice.URL,
+	stun *stun.URI,
+	turn *stun.URI,
 ) *StunTurnConfig {
 	return &StunTurnConfig{
 		Stun: stun,
@@ -21,8 +23,8 @@ func NewStunTurnConfig(
 	}
 }
 
-func (s *StunTurnConfig) GetStunTurnsURL() []*ice.URL {
-	var urls []*ice.URL
+func (s *StunTurnConfig) GetStunTurnsURL() []*stun.URI {
+	var urls []*stun.URI
 	urls = append(urls, s.Stun)
 	urls = append(urls, s.Turn)
 	return urls
